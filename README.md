@@ -4,6 +4,24 @@ A single source of truth that keeps [Claude Code](https://claude.com/claude-code
 sync across every surface: **CLI + Desktop** on many hosts, and **claude.ai cloud**
 (web + mobile). It's both a **plugin marketplace** and the **sync machinery** around it.
 
+## ⚡ Quick install — run on each host, then restart Claude Code
+
+**macOS / Linux** (and Windows via Git Bash):
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/proton-pidgeon/claude-skills/main/install/install.sh | bash
+```
+
+**Windows (native PowerShell):**
+
+```powershell
+irm https://raw.githubusercontent.com/proton-pidgeon/claude-skills/main/install/install.ps1 | iex
+```
+
+Installs the `kev` plugin, merges shared settings, and clones the `~/claude-memory` vault.
+Per-host secrets are **not** synced — re-run the telegram-notify setup (`~/.claude/.telegram`)
+and add any MCP tokens locally. Details below.
+
 ## The two-camp model (why this is split the way it is)
 
 | Camp | Surfaces | Persistence | How it's reached |

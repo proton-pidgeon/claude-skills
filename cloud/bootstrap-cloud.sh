@@ -24,7 +24,7 @@ log() { echo "[kev-cloud] $*" >&2; }
 # Pinned to a reviewed commit so a compromised upstream main can't auto-inject into
 # cloud sessions. Bump PIN_REF (and the curl SHA in cloud/settings.json) when cloud
 # scripts change. Override with KEV_PIN_REF if you need a different ref.
-PIN_REF="${KEV_PIN_REF:-main}"
+PIN_REF="${KEV_PIN_REF:-d239288cb9efb5bfb6d9f9b06bc126d75b7ac675}"
 if [ ! -d "$RES/.git" ]; then
   git clone "$SKILLS_REPO" "$RES" 2>/dev/null && git -C "$RES" checkout -q "$PIN_REF" 2>/dev/null || true
 fi

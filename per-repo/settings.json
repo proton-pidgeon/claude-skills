@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "curl -fsSL --max-time 10 https://raw.githubusercontent.com/proton-pidgeon/claude-skills/main/scripts/session-start-ingest-skill.sh | bash",
+            "command": "curl -fsSL --max-time 10 https://raw.githubusercontent.com/proton-pidgeon/claude-skills/d239288cb9efb5bfb6d9f9b06bc126d75b7ac675/scripts/session-start-ingest-skill.sh | bash",
             "timeout": 30
           }
         ]

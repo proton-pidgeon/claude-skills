@@ -15,6 +15,14 @@ plus what a repo-committed `SessionStart` hook pulls in. This folder bridges tha
    `CLAUDE_COWORK_MEMORY_PATH_OVERRIDE` for the session and (b) injects an
    `@import` of `MEMORY.md` into the project `CLAUDE.md` inside a marked block.
 
+### Private memory vault — set `KEV_MEM_TOKEN`
+
+The vault is private, and cloud's built-in git auth only covers the working repo. To let
+the bootstrap clone it, add a **fine-grained GitHub token** (repo `claude-memory`,
+Contents: Read — add Write only if you want cloud→memory push-back) as an Environment
+variable named `KEV_MEM_TOKEN`. The script authenticates with it and then scrubs the token
+from the clone's git config. Without the token, the memory step simply no-ops.
+
 > ⚠️ **Verify the memory path on a real cloud session.** Cloud memory behaviour is
 > the least certain part of this design; the skills bootstrap is solid. If the env
 > override isn't honoured, the `CLAUDE.md` import fallback still surfaces the memory.
@@ -27,8 +35,7 @@ session on that repo will bootstrap automatically.
 
 **Cloud Environment (account-wide):** in claude.ai/code → Environment settings, add the
 one-line `curl … | bash` from `cloud/settings.json` to the **setup script**, so it runs
-without per-repo committing. Add a fine-grained GitHub token as an env var if you want
-the (optional) memory write-back from cloud.
+without per-repo committing. Set `KEV_MEM_TOKEN` (above) so the private vault can be pulled.
 
 ## What stays out of cloud
 

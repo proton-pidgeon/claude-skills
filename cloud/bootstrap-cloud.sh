@@ -28,6 +28,15 @@ if [ -d "$RES/plugins/kev/skills" ]; then
   cp -R "$RES"/plugins/kev/skills/. "$PROJ/.claude/skills/" 2>/dev/null || true
   cp -R "$RES"/plugins/kev/commands/. "$PROJ/.claude/commands/" 2>/dev/null || true
   echo "[kev-cloud] linked skills + commands into $PROJ/.claude"
+  # Keep these injected (untracked) files out of git status / Stop hooks — local-only
+  # via .git/info/exclude (never committed), so they can't be accidentally added to the
+  # repo or drift from upstream. Only the names we inject are excluded; tracked files and
+  # the repo's own skills are untouched.
+  if [ -d "$PROJ/.git" ]; then
+    EX="$PROJ/.git/info/exclude"; mkdir -p "$(dirname "$EX")"; touch "$EX"
+    for d in "$RES"/plugins/kev/skills/*/; do [ -d "$d" ] || continue; n=".claude/skills/$(basename "$d")/"; grep -qxF "$n" "$EX" 2>/dev/null || echo "$n" >> "$EX"; done
+    for f in "$RES"/plugins/kev/commands/*; do [ -e "$f" ] || continue; n=".claude/commands/$(basename "$f")"; grep -qxF "$n" "$EX" 2>/dev/null || echo "$n" >> "$EX"; done
+  fi
 fi
 
 # 2) Clone the private memory vault with the token (scrub token from the clone afterward)

@@ -39,7 +39,18 @@ if [ -d "$RES/plugins/kev/commands" ]; then
 fi
 
 # ── 2. Memory (best-effort — verify on a live cloud session) ───────────────
-[ -d "$MEM/.git" ] || git clone --depth 1 "$MEM_REPO" "$MEM" 2>/dev/null || true
+# Pull the vault. If KEV_MEM_TOKEN is set (needed for a PRIVATE vault), authenticate with
+# it, then scrub the token from the stored remote so it is not persisted in the clone.
+# Otherwise clone plainly (public vault, or where the cloud's own git auth already covers it).
+if [ ! -d "$MEM/.git" ]; then
+  if [ -n "${KEV_MEM_TOKEN:-}" ] && [ "${MEM_REPO#https://github.com/}" != "$MEM_REPO" ]; then
+    _u="https://x-access-token:${KEV_MEM_TOKEN}@github.com/${MEM_REPO#https://github.com/}"
+    if git clone --depth 1 "$_u" "$MEM" 2>/dev/null; then git -C "$MEM" remote set-url origin "$MEM_REPO" 2>/dev/null || true; fi
+    unset _u
+  else
+    git clone --depth 1 "$MEM_REPO" "$MEM" 2>/dev/null || true
+  fi
+fi
 if [ -f "$MEM/MEMORY.md" ]; then
   # (a) Try pointing auto-memory at the cloned vault for this session.
   if [ -n "${CLAUDE_ENV_FILE:-}" ]; then

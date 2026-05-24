@@ -1,141 +1,103 @@
 #!/usr/bin/env bash
-# Installs the /ingest skill SessionStart hook for macOS, Linux, Claude
-# Cloud sandbox, or Git Bash on Windows.
+# Bootstrap a host (CLI + Desktop) for Kev's synced Claude Code setup.
 #
-# Quick-install (no clone required):
-#
+# Quick-install (single line, no clone needed):
 #   curl -fsSL https://raw.githubusercontent.com/proton-pidgeon/claude-skills/main/install/install.sh | bash
 #
-# What it does:
-#   1. Downloads scripts/session-start-ingest-skill.sh to ~/.claude/scripts/
-#   2. Idempotently adds a SessionStart hook entry to ~/.claude/settings.json
-#      (creating the file if missing), removing any prior entries that
-#      pointed at the legacy script location.
+# Idempotent. What it does:
+#   1. Adds the `kevdunn` marketplace and installs the `kev` plugin
+#      (skills: ingest, shannon; command: telegram; agents: arch + ux reviewers;
+#       plus the fully-automatic memory-sync hooks).
+#   2. Deep-merges install/settings.shared.json into ~/.claude/settings.json
+#      (timestamped backup first; your host-only keys are preserved).
+#   3. Clones the memory vault (default proton-pidgeon/claude-memory) to the path
+#      named by autoMemoryDirectory (default ~/claude-memory) so memory syncs everywhere.
+#   4. Reminds you which secrets are per-host and never synced.
 #
-# Env var overrides:
-#   INGEST_SKILL_REPO_RAW_BASE  e.g. https://raw.githubusercontent.com/<you>/claude-skills/main
-#   CLAUDE_HOME                 e.g. /custom/.claude  (defaults to $HOME/.claude)
+# Env overrides:
+#   CLAUDE_HOME        (default $HOME/.claude)
+#   KEV_REPO_RAW_BASE  (default https://raw.githubusercontent.com/proton-pidgeon/claude-skills/main)
+#   KEV_MEMORY_REPO    (default proton-pidgeon/claude-memory)
 
 set -euo pipefail
 
-REPO_RAW_BASE="${INGEST_SKILL_REPO_RAW_BASE:-https://raw.githubusercontent.com/proton-pidgeon/claude-skills/main}"
+REPO_RAW_BASE="${KEV_REPO_RAW_BASE:-https://raw.githubusercontent.com/proton-pidgeon/claude-skills/main}"
 CLAUDE_HOME="${CLAUDE_HOME:-$HOME/.claude}"
-SCRIPTS_DIR="$CLAUDE_HOME/scripts"
-SCRIPT_PATH="$SCRIPTS_DIR/session-start-ingest-skill.sh"
-SETTINGS_PATH="$CLAUDE_HOME/settings.json"
+SETTINGS="$CLAUDE_HOME/settings.json"
+MEMORY_REPO="${KEV_MEMORY_REPO:-proton-pidgeon/claude-memory}"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" 2>/dev/null && pwd || echo "")"
 
-mkdir -p "$SCRIPTS_DIR"
+say()  { echo "→ $*"; }
+warn() { echo "⚠ $*" >&2; }
 
-echo "→ Fetching session-start-ingest-skill.sh"
-curl -fsSL --max-time 15 "$REPO_RAW_BASE/scripts/session-start-ingest-skill.sh" -o "$SCRIPT_PATH"
-chmod +x "$SCRIPT_PATH"
+command -v git  >/dev/null 2>&1 || { warn "git is required"; exit 1; }
+command -v curl >/dev/null 2>&1 || { warn "curl is required"; exit 1; }
+command -v claude >/dev/null 2>&1 || { warn "claude CLI not found on PATH"; exit 1; }
+HAVE_JQ=1; command -v jq >/dev/null 2>&1 || HAVE_JQ=0
 
-# ── Merge hook into settings.json ─────────────────────────────────────────
-# The merge is JSON-aware. Prefers jq; falls back to python3. If neither
-# is available we print the snippet for manual merge and exit non-zero.
+mkdir -p "$CLAUDE_HOME"
 
-# Build a marker that uniquely identifies our hook entry so we can find
-# and replace it idempotently across runs.
-HOOK_COMMAND="bash \"$SCRIPT_PATH\""
+# ── 1. Marketplace + plugin ────────────────────────────────────────────────
+say "Adding marketplace + installing the kev plugin"
+claude plugin marketplace add proton-pidgeon/claude-skills 2>/dev/null \
+  || claude plugin marketplace update kevdunn 2>/dev/null || true
+claude plugin install kev@kevdunn 2>/dev/null \
+  || claude plugin update kev@kevdunn 2>/dev/null || true
 
-if [ ! -f "$SETTINGS_PATH" ]; then
-    echo "→ Creating $SETTINGS_PATH"
-    echo '{}' > "$SETTINGS_PATH"
-fi
+# ── 2. Merge shared settings ───────────────────────────────────────────────
+say "Merging shared preferences into $SETTINGS"
+[ -f "$SETTINGS" ] || echo '{}' > "$SETTINGS"
+cp "$SETTINGS" "$SETTINGS.bak.$(date +%Y%m%d%H%M%S)"
 
-# Snapshot for safety
-cp "$SETTINGS_PATH" "$SETTINGS_PATH.bak.$(date +%Y%m%d%H%M%S)"
-
-merge_with_jq() {
-    local tmp
-    tmp=$(mktemp)
-    jq --arg cmd "$HOOK_COMMAND" '
-      # Ensure the hooks.SessionStart array exists
-      .hooks //= {}
-      | .hooks.SessionStart //= []
-
-      # Strip any existing entries that reference our script (legacy or current).
-      | .hooks.SessionStart |= (
-          map(
-            .hooks |= (map(select((.command // "") | test("session-start-ingest-skill"; "") | not)))
-          )
-          # Drop now-empty matcher buckets so we do not accumulate stubs
-          | map(select((.hooks // []) | length > 0))
-        )
-
-      # Find a matcher == "*" bucket; create one if absent
-      | (.hooks.SessionStart | map(.matcher == "*") | index(true)) as $i
-      | if $i == null then
-          .hooks.SessionStart += [{
-            "matcher": "*",
-            "hooks": [{"type": "command", "command": $cmd, "timeout": 30}]
-          }]
-        else
-          .hooks.SessionStart[$i].hooks += [{"type": "command", "command": $cmd, "timeout": 30}]
-        end
-    ' "$SETTINGS_PATH" > "$tmp"
-    mv "$tmp" "$SETTINGS_PATH"
-}
-
-merge_with_python() {
-    HOOK_COMMAND="$HOOK_COMMAND" SETTINGS_PATH="$SETTINGS_PATH" python3 - <<'PY'
-import json, os, sys
-path = os.environ['SETTINGS_PATH']
-cmd  = os.environ['HOOK_COMMAND']
-with open(path, 'r', encoding='utf-8') as fh:
-    data = json.load(fh)
-
-hooks  = data.setdefault('hooks', {})
-starts = hooks.setdefault('SessionStart', [])
-
-# Strip any existing entries that reference our script (legacy or current).
-new_starts = []
-for bucket in starts:
-    bucket_hooks = bucket.get('hooks', []) or []
-    kept = [h for h in bucket_hooks if 'session-start-ingest-skill' not in (h.get('command') or '')]
-    if kept:
-        bucket['hooks'] = kept
-        new_starts.append(bucket)
-hooks['SessionStart'] = new_starts
-
-# Find the matcher == "*" bucket
-target = next((b for b in new_starts if b.get('matcher') == '*'), None)
-if target is None:
-    target = {'matcher': '*', 'hooks': []}
-    new_starts.append(target)
-target['hooks'].append({'type': 'command', 'command': cmd, 'timeout': 30})
-
-with open(path, 'w', encoding='utf-8') as fh:
-    json.dump(data, fh, indent=2)
-    fh.write('\n')
-PY
-}
-
-if command -v jq >/dev/null 2>&1; then
-    echo "→ Merging hook with jq"
-    merge_with_jq
-elif command -v python3 >/dev/null 2>&1; then
-    echo "→ Merging hook with python3"
-    merge_with_python
+SHARED_TMP="$(mktemp)"
+trap 'rm -f "$SHARED_TMP"' EXIT
+if [ -n "$SCRIPT_DIR" ] && [ -f "$SCRIPT_DIR/settings.shared.json" ]; then
+  cp "$SCRIPT_DIR/settings.shared.json" "$SHARED_TMP"
 else
-    cat <<EOF >&2
-
-⚠ Neither jq nor python3 is on PATH; cannot edit $SETTINGS_PATH safely.
-  Manually add this to "hooks.SessionStart" (matcher "*"):
-
-    { "type": "command", "command": "$HOOK_COMMAND", "timeout": 30 }
-
-EOF
-    exit 1
+  curl -fsSL --max-time 15 "$REPO_RAW_BASE/install/settings.shared.json" -o "$SHARED_TMP"
 fi
 
+if [ "$HAVE_JQ" = "1" ]; then
+  TMP="$(mktemp)"
+  # Deep-merge: shared wins for keys it defines (so preferences propagate); nested
+  # objects (env, enabledPlugins) union; host-only keys preserved. Drop _comment.
+  jq -s '.[0] * (.[1] | del(._comment))' "$SETTINGS" "$SHARED_TMP" > "$TMP" && mv "$TMP" "$SETTINGS"
+  say "Settings merged"
+else
+  warn "jq not found — skipped settings merge. Install jq and re-run, or merge install/settings.shared.json by hand."
+fi
+
+# ── 3. Memory vault ────────────────────────────────────────────────────────
+if [ "$HAVE_JQ" = "1" ]; then
+  MEM_DIR="$(jq -r '.autoMemoryDirectory // "~/claude-memory"' "$SETTINGS" 2>/dev/null || echo "~/claude-memory")"
+else
+  MEM_DIR="~/claude-memory"
+fi
+case "$MEM_DIR" in
+  "~")   MEM_DIR="$HOME" ;;
+  "~/"*) MEM_DIR="$HOME/${MEM_DIR#"~/"}" ;;
+esac
+
+if [ -d "$MEM_DIR/.git" ]; then
+  say "Memory vault present at $MEM_DIR — pulling latest"
+  git -C "$MEM_DIR" pull --rebase --autostash --quiet 2>/dev/null || true
+else
+  say "Cloning memory vault $MEMORY_REPO -> $MEM_DIR"
+  if git clone "https://github.com/$MEMORY_REPO.git" "$MEM_DIR" 2>/dev/null \
+     || { command -v gh >/dev/null 2>&1 && gh repo clone "$MEMORY_REPO" "$MEM_DIR" 2>/dev/null; }; then
+    say "Memory vault cloned"
+  else
+    warn "Could not clone $MEMORY_REPO (missing or no access). Create it, then re-run. autoMemoryDirectory is set to $MEM_DIR."
+  fi
+fi
+
+# ── 4. Per-host secrets reminder ───────────────────────────────────────────
 echo
-echo "✓ Installed."
-echo "  Script:   $SCRIPT_PATH"
-echo "  Settings: $SETTINGS_PATH"
+echo "✓ Bootstrap complete. Restart Claude Code to load the plugin and hooks."
 echo
-echo "Open a new Claude Code session inside any git repo — the /ingest"
-echo "skill will be fetched into .claude/skills/ingest/SKILL.md and"
-echo "auto-committed if the working tree is otherwise clean."
+echo "Per-host secrets are NEVER synced — set these on each machine:"
+echo "  • Telegram alerts:   run the telegram-notify setup, then creds live in ~/.claude/.telegram"
+echo "  • MCP server tokens: add to ~/.claude.json or environment (never committed)"
 echo
-echo "Per-repo opt-out:  touch .claude/no-ingest-skill"
+echo "Memory lives in: $MEM_DIR  (open it as an Obsidian vault for a GUI)."
+echo "It syncs automatically on session start (pull) and session end (push)."

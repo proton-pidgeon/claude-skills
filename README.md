@@ -1,124 +1,92 @@
-# claude-skills
+# claude-skills — Kev's Claude Code marketplace & cross-surface sync
 
-A collection of skills for [Claude Code](https://claude.com/claude-code), with cross-OS hooks that automatically install them into every git repo you work in.
+A single source of truth that keeps [Claude Code](https://claude.com/claude-code) in
+sync across every surface: **CLI + Desktop** on many hosts, and **claude.ai cloud**
+(web + mobile). It's both a **plugin marketplace** and the **sync machinery** around it.
 
-Currently shipped:
+## The two-camp model (why this is split the way it is)
 
-- **`/ingest`** — turn design docs into `specs/` and `tasks/` scaffolding ([`ingest/SKILL.md`](ingest/SKILL.md))
+| Camp | Surfaces | Persistence | How it's reached |
+|---|---|---|---|
+| **Filesystem** | CLI + Desktop | share the same `~/.claude/` per host | plugin install + git-synced memory + session hooks |
+| **Cloud** | web + mobile | ephemeral sandbox; **ignores `~/.claude`** | repo-committed `SessionStart` hook clones resources ([`cloud/`](cloud/)) |
 
----
+Git is the only substrate that reaches both. So: skills/commands/agents/hooks ship as a
+**plugin**; memory lives in a **git-synced vault** (`claude-memory`); cloud gets a
+committed bootstrap hook.
 
-## How it works
+## Install a host (CLI + Desktop)
 
-When you open a Claude Code session inside any git repo, a `SessionStart` hook fires a small script that:
-
-1. Fetches the latest `SKILL.md` from this GitHub repo
-2. Compares it to the local copy at `<repo>/.claude/skills/ingest/SKILL.md`
-3. Writes the new content if they differ (or the file is missing)
-4. Auto-commits the change — but only if your working tree is otherwise clean, so it never pollutes a feature branch mid-work
-
-Once `SKILL.md` is committed, it travels with the repo to Claude in the cloud — no further setup needed there.
-
----
-
-## Install (per local machine)
-
-Pick the line for your OS. Each installer is idempotent — run again any time to refresh.
-
-### macOS / Linux
+One idempotent line — installs the plugin, merges shared preferences, and clones your
+memory vault:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/proton-pidgeon/claude-skills/main/install/install.sh | bash
 ```
 
-Requires `bash`, `curl`, `git`, and either `jq` or `python3` (for editing `settings.json` safely).
+(Windows native PowerShell: `install/install.ps1`.) Then restart Claude Code.
 
-### Windows (native PowerShell)
+> **Windows note:** the bootstrap (`install.ps1`) is pure PowerShell, but the runtime
+> memory-sync hooks invoke `bash`, so keep **Git for Windows** on PATH. Without it the
+> sync hooks no-op harmlessly (no crash) — you'd just sync memory manually until bash is
+> available. A native-PowerShell sync hook is a planned follow-up.
 
-```powershell
-irm https://raw.githubusercontent.com/proton-pidgeon/claude-skills/main/install/install.ps1 | iex
-```
+Prefer to do it by hand? `/plugin marketplace add proton-pidgeon/claude-skills` then
+`/plugin install kev@kevdunn`.
 
-Requires PowerShell 5.1+ and `git` on PATH.
+## What's in the `kev` plugin
 
-### Git Bash on Windows
+| Type | Items |
+|---|---|
+| Skills | `/ingest` (design docs → specs/tasks), `/shannon` (Keygraph pentester wrapper) |
+| Commands | `/telegram` (notify via your bot) |
+| Agents | `arch-infrastructure-reviewer`, `ux-design-reviewer` |
+| Hooks | fully-automatic memory sync (see below) |
 
-Use the macOS/Linux installer above — it installs the bash hook, and Claude Code on Windows can run bash if Git for Windows is on PATH.
+## Memory sync (fully automatic)
 
----
+Your operational memory lives in the **`claude-memory`** vault (a git repo you can open
+as an Obsidian vault). Each host points Claude's `autoMemoryDirectory` at its local clone
+(`~/claude-memory` by default), and the plugin's hooks keep it in sync:
 
-## What the installer does
+- **SessionStart** → `git pull --rebase --autostash` the vault (+ refresh the marketplace clone).
+- **SessionEnd** → commit + push memory changes, conflict-safe. On an unresolvable
+  rebase conflict it aborts the push, leaves your work intact, and fires a **Telegram
+  alert** so you can merge by hand.
 
-Writes the OS-specific session-start script to `~/.claude/scripts/`:
+Scripts: [`plugins/kev/scripts/`](plugins/kev/scripts/). The memory directory is read
+from `autoMemoryDirectory` — one source of truth, no hard-coded paths.
 
-| OS                | Script                                                 |
-|-------------------|--------------------------------------------------------|
-| macOS / Linux     | `~/.claude/scripts/session-start-ingest-skill.sh`      |
-| Windows           | `~/.claude/scripts/session-start-ingest-skill.ps1`     |
+## Cloud (web + mobile)
 
-Adds a `SessionStart` entry to `~/.claude/settings.json` (creating the file if missing). A backup `settings.json.bak.<timestamp>` is written next to it before any edits.
+See [`cloud/`](cloud/). Commit `cloud/settings.json` into a repo's `.claude/` (or add the
+one-liner to your cloud Environment setup script) and cloud sessions will clone the
+skills + memory at startup. Skills injection is solid; cloud memory is best-effort —
+verify it on a live session.
 
-The installer also removes any prior hook entries whose command path references `session-start-ingest-skill` — so it's safe to run after relocating scripts or after a previous broken setup.
+## Secrets — never synced
 
----
-
-## Claude in the cloud
-
-There are two independent ways cloud sessions can pick this up; you can use either or both.
-
-**Option A — passive (recommended):** once the local hook has installed `.claude/skills/ingest/SKILL.md` into a repo and you've committed it, cloud sessions for that repo see it automatically. No cloud-side install needed.
-
-**Option B — per-repo auto-refresh:** if you want cloud sessions to pull the latest `SKILL.md` from this repo on every session start (not just whatever was committed last), copy [`per-repo/settings.json`](per-repo/settings.json) into the target repo at `.claude/settings.json`:
-
-```bash
-mkdir -p .claude
-curl -fsSL https://raw.githubusercontent.com/proton-pidgeon/claude-skills/main/per-repo/settings.json \
-  -o .claude/settings.json
-git add .claude/settings.json && git commit -m "Auto-refresh /ingest skill on session start"
-```
-
-This makes the hook fetch and run the bash script directly from GitHub raw at session start — no local install required for cloud or any other machine.
-
----
-
-## Per-repo opt-out
-
-To skip the skill installation in a specific repo:
-
-```bash
-mkdir -p .claude && touch .claude/no-ingest-skill
-```
-
-The hook checks for this marker and exits silently.
-
----
-
-## Configuration
-
-Both the installer and the session-start scripts respect these environment variables:
-
-| Variable                       | Purpose                                                         |
-|--------------------------------|-----------------------------------------------------------------|
-| `INGEST_SKILL_URL`             | Override the upstream `SKILL.md` URL (e.g. point at a fork)     |
-| `INGEST_SKILL_REPO_RAW_BASE`   | Override the raw base URL the installer fetches scripts from    |
-| `INGEST_SKILL_QUIET`           | Set non-empty to suppress non-error hook output                 |
-| `CLAUDE_HOME`                  | Override the `~/.claude` install location                       |
-
----
+`.credentials.json`, `~/.claude/.telegram`, `.session-config.json`, and MCP tokens stay
+per host. Shared settings (`install/settings.shared.json`) deliberately **exclude**
+permission-bypass flags and host-specific plugins — set those per machine.
 
 ## Repo layout
 
 ```
 .
-├── ingest/
-│   └── SKILL.md                          # the skill itself
-├── scripts/
-│   ├── session-start-ingest-skill.sh     # bash hook (mac/linux/cloud/git-bash)
-│   └── session-start-ingest-skill.ps1    # PowerShell hook (windows native)
+├── .claude-plugin/marketplace.json     # marketplace manifest (name: kevdunn)
+├── plugins/kev/                        # the plugin
+│   ├── .claude-plugin/plugin.json
+│   ├── skills/{ingest,shannon}/SKILL.md
+│   ├── commands/telegram.md
+│   ├── agents/{arch-infrastructure,ux-design}-reviewer.md
+│   ├── hooks/hooks.json                # SessionStart/SessionEnd sync
+│   └── scripts/kev-sync-{pull,push}.sh
 ├── install/
-│   ├── install.sh                        # mac/linux/cloud installer
-│   └── install.ps1                       # windows installer
-├── per-repo/
-│   └── settings.json                     # optional .claude/settings.json template
+│   ├── install.sh / install.ps1        # per-host bootstrap
+│   └── settings.shared.json            # portable preferences (jq-merged)
+├── cloud/                              # claude.ai cloud bootstrap
+│   ├── settings.json  bootstrap-cloud.sh  README.md
+├── scripts/  per-repo/                 # legacy ingest-only hook (superseded by the plugin)
 └── README.md
 ```

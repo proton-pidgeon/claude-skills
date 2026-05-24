@@ -1,0 +1,13 @@
+{
+  "$schema": "https://anthropic.com/claude-code/plugin.schema.json",
+  "name": "kev",
+  "description": "Personal skills (ingest, shannon), commands (telegram), review agents (architecture, UX/accessibility), and cross-surface sync hooks.",
+  "version": "0.1.0",
+  "author": {
+    "name": "Kev Dunn",
+    "email": "kevdunn@gmail.com"
+  },
+  "homepage": "https://github.com/proton-pidgeon/claude-skills",
+  "repository": "https://github.com/proton-pidgeon/claude-skills",
+  "license": "MIT"
+}

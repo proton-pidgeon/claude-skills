@@ -1,0 +1,28 @@
+{
+  "description": "Fully-automatic memory sync for the kev plugin: pull the memory vault + refresh the marketplace on SessionStart, commit + push memory on SessionEnd (conflict-safe, Telegram alert on conflict).",
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "startup|resume",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/scripts/kev-sync-pull.sh\"",
+            "timeout": 60
+          }
+        ]
+      }
+    ],
+    "SessionEnd": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/scripts/kev-sync-push.sh\"",
+            "timeout": 60
+          }
+        ]
+      }
+    ]
+  }
+}

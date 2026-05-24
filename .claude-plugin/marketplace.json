@@ -1,0 +1,20 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "kevdunn",
+  "description": "Kev Dunn's personal Claude Code resources, synced across CLI, desktop, and cloud surfaces.",
+  "owner": {
+    "name": "Kev Dunn",
+    "email": "kevdunn@gmail.com"
+  },
+  "plugins": [
+    {
+      "name": "kev",
+      "description": "Personal skills (ingest, shannon), commands (telegram), review agents (architecture, UX/accessibility), and cross-surface sync hooks.",
+      "author": {
+        "name": "Kev Dunn"
+      },
+      "category": "productivity",
+      "source": "./plugins/kev"
+    }
+  ]
+}

@@ -1,0 +1,17 @@
+{
+  "_comment": "Commit this as a repo's .claude/settings.json (or merge its hooks block) to bootstrap Kev's skills + memory inside claude.ai/code cloud sessions (web + mobile). The hook is a no-op on local CLI/Desktop (it only acts when CLAUDE_CODE_REMOTE=true).",
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "startup|resume",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "curl -fsSL --max-time 20 https://raw.githubusercontent.com/proton-pidgeon/claude-skills/main/cloud/bootstrap-cloud.sh | bash",
+            "timeout": 60
+          }
+        ]
+      }
+    ]
+  }
+}

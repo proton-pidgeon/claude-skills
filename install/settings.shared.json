@@ -1,0 +1,13 @@
+{
+  "_comment": "Portable Claude Code preferences merged into ~/.claude/settings.json by install/install.sh (jq deep-merge; your host-only keys are preserved). Deliberately excludes permission-bypass flags (skipDangerousModePermissionPrompt, skipAutoPermissionPrompt, defaultMode) and host-specific plugins (e.g. swift-lsp) — set those per host.",
+  "env": {
+    "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1"
+  },
+  "effortLevel": "high",
+  "theme": "light-ansi",
+  "agentPushNotifEnabled": true,
+  "autoMemoryDirectory": "~/claude-memory",
+  "enabledPlugins": {
+    "kev@kevdunn": true
+  }
+}

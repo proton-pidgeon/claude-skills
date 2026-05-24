@@ -27,7 +27,7 @@ fi
 REPO_ROOT=$(git rev-parse --show-toplevel)
 REL_PATH=".claude/skills/ingest/SKILL.md"
 SKILL_PATH="$REPO_ROOT/$REL_PATH"
-SKILL_URL="${INGEST_SKILL_URL:-https://raw.githubusercontent.com/proton-pidgeon/claude-skills/main/ingest/SKILL.md}"
+SKILL_URL="${INGEST_SKILL_URL:-https://raw.githubusercontent.com/proton-pidgeon/claude-skills/main/plugins/kev/skills/ingest/SKILL.md}"
 
 # ── 1. Per-repo opt-out ───────────────────────────────────────────────────
 if [ -f "$REPO_ROOT/.claude/no-ingest-skill" ]; then

@@ -1,76 +1,52 @@
 #!/usr/bin/env bash
-# Cloud SessionStart bootstrap for claude.ai/code (web + mobile).
-#
-# Cloud sandboxes do NOT read your ~/.claude (no personal plugins/skills/memory),
-# so this script — invoked by a repo-committed .claude/settings.json SessionStart
-# hook — pulls Kev's resources into the ephemeral session. No-op outside cloud.
-#
-# Reliable: links the plugin's skills + commands into the session.
-# Best-effort: exposes the memory vault's MEMORY.md as session context
-#   (cloud memory semantics vary — verify on a real cloud session).
+# Cloud SessionStart hook for claude.ai/code (web + mobile).
+# Cloud ignores ~/.claude, so this (run by a repo-committed .claude/settings.json
+# SessionStart hook) brings Kev's resources into the ephemeral session:
+#   - Skills + commands: copied into the project's .claude/  (side effects -> stderr)
+#   - Memory: the private vault is cloned with KEV_MEM_TOKEN and its contents are emitted
+#     as SessionStart `additionalContext` (injected straight into the model context).
+# Only the final JSON goes to real stdout; everything else goes to stderr.
 
 set -uo pipefail
-[ "${CLAUDE_CODE_REMOTE:-}" = "true" ] || exit 0   # cloud only
+exec 3>&1 1>&2          # logs -> stderr; fd 3 holds the real stdout for the JSON result
+
+[ "${CLAUDE_CODE_REMOTE:-}" = "true" ] || exit 0
 
 PROJ="${CLAUDE_PROJECT_DIR:-$PWD}"
-SKILLS_REPO="${KEV_SKILLS_REPO:-https://github.com/proton-pidgeon/claude-skills.git}"
-MEM_REPO="${KEV_MEMORY_REPO_URL:-https://github.com/proton-pidgeon/claude-memory.git}"
-RES="/tmp/kev-resources"
-MEM="/tmp/claude-memory"
+RES="${KEV_RES_DIR:-/tmp/kev-resources}"
+MEM="${KEV_MEM_DIR:-/tmp/claude-memory}"
+SKILLS_REF="${KEV_PIN_REF:-d239288cb9efb5bfb6d9f9b06bc126d75b7ac675}"
+SKILLS_URL="https://github.com/proton-pidgeon/claude-skills.git"
+MEM_PATH="proton-pidgeon/claude-memory.git"
 
-log() { echo "[kev-cloud] $*" >&2; }
-
-# ── 1. Skills + commands (reliable) ────────────────────────────────────────
-# Pinned to a reviewed commit so a compromised upstream main can't auto-inject into
-# cloud sessions. Bump PIN_REF (and the curl SHA in cloud/settings.json) when cloud
-# scripts change. Override with KEV_PIN_REF if you need a different ref.
-PIN_REF="${KEV_PIN_REF:-d239288cb9efb5bfb6d9f9b06bc126d75b7ac675}"
+# 1) Skills + commands -> project .claude/
 if [ ! -d "$RES/.git" ]; then
-  git clone "$SKILLS_REPO" "$RES" 2>/dev/null && git -C "$RES" checkout -q "$PIN_REF" 2>/dev/null || true
+  git clone "$SKILLS_URL" "$RES" 2>/dev/null && git -C "$RES" checkout -q "$SKILLS_REF" 2>/dev/null || true
 fi
 if [ -d "$RES/plugins/kev/skills" ]; then
-  mkdir -p "$PROJ/.claude/skills"
-  cp -R "$RES"/plugins/kev/skills/* "$PROJ/.claude/skills/" 2>/dev/null || true
-  log "linked skills into $PROJ/.claude/skills"
-fi
-if [ -d "$RES/plugins/kev/commands" ]; then
-  mkdir -p "$PROJ/.claude/commands"
-  cp -R "$RES"/plugins/kev/commands/* "$PROJ/.claude/commands/" 2>/dev/null || true
+  mkdir -p "$PROJ/.claude/skills" "$PROJ/.claude/commands"
+  cp -R "$RES"/plugins/kev/skills/. "$PROJ/.claude/skills/" 2>/dev/null || true
+  cp -R "$RES"/plugins/kev/commands/. "$PROJ/.claude/commands/" 2>/dev/null || true
+  echo "[kev-cloud] linked skills + commands into $PROJ/.claude"
 fi
 
-# ── 2. Memory (best-effort — verify on a live cloud session) ───────────────
-# Pull the vault. If KEV_MEM_TOKEN is set (needed for a PRIVATE vault), authenticate with
-# it, then scrub the token from the stored remote so it is not persisted in the clone.
-# Otherwise clone plainly (public vault, or where the cloud's own git auth already covers it).
-if [ ! -d "$MEM/.git" ]; then
-  if [ -n "${KEV_MEM_TOKEN:-}" ] && [ "${MEM_REPO#https://github.com/}" != "$MEM_REPO" ]; then
-    _u="https://x-access-token:${KEV_MEM_TOKEN}@github.com/${MEM_REPO#https://github.com/}"
-    if git clone --depth 1 "$_u" "$MEM" 2>/dev/null; then git -C "$MEM" remote set-url origin "$MEM_REPO" 2>/dev/null || true; fi
-    unset _u
-  else
-    git clone --depth 1 "$MEM_REPO" "$MEM" 2>/dev/null || true
+# 2) Clone the private memory vault with the token (scrub token from the clone afterward)
+if [ ! -d "$MEM/.git" ] && [ -n "${KEV_MEM_TOKEN:-}" ]; then
+  if git clone --depth 1 "https://x-access-token:${KEV_MEM_TOKEN}@github.com/${MEM_PATH}" "$MEM" 2>/dev/null; then
+    git -C "$MEM" remote set-url origin "https://github.com/${MEM_PATH}" 2>/dev/null || true
   fi
 fi
+
+# 3) Emit memory as SessionStart additionalContext (JSON on real stdout = fd 3)
 if [ -f "$MEM/MEMORY.md" ]; then
-  # (a) Try pointing auto-memory at the cloned vault for this session.
-  if [ -n "${CLAUDE_ENV_FILE:-}" ]; then
-    echo "CLAUDE_COWORK_MEMORY_PATH_OVERRIDE=$MEM" >> "$CLAUDE_ENV_FILE" 2>/dev/null || true
-  fi
-  # (b) Fallback: inject an import of the memory index into the project CLAUDE.md,
-  #     inside a clearly-marked managed block so it is obvious and easy to drop.
-  CM="$PROJ/CLAUDE.md"
-  MARK_BEGIN="<!-- kev-memory:begin (cloud session import) -->"
-  MARK_END="<!-- kev-memory:end -->"
-  if [ -f "$CM" ] && grep -qF "$MARK_BEGIN" "$CM" 2>/dev/null; then
-    : # already injected this session
+  CTX="$( { echo "# Your synced Claude memory (private claude-memory vault)"; echo; echo "## MEMORY.md (index)"; cat "$MEM/MEMORY.md"; echo; for f in "$MEM"/*.md; do b="$(basename "$f")"; [ "$b" = "MEMORY.md" ] && continue; echo "## $b"; cat "$f"; echo; done; } )"
+  if command -v jq >/dev/null 2>&1; then
+    jq -n --arg c "$CTX" '{hookSpecificOutput:{hookEventName:"SessionStart",additionalContext:$c}}' >&3
   else
-    {
-      echo ""
-      echo "$MARK_BEGIN"
-      echo "@/tmp/claude-memory/MEMORY.md"
-      echo "$MARK_END"
-    } >> "$CM" 2>/dev/null || true
-    log "injected memory import into $CM"
+    CTX="$CTX" python3 -c 'import json,os;print(json.dumps({"hookSpecificOutput":{"hookEventName":"SessionStart","additionalContext":os.environ["CTX"]}}))' >&3
   fi
+  echo "[kev-cloud] injected memory as additionalContext"
+else
+  echo "[kev-cloud] no memory (token missing or clone failed); skills still linked"
 fi
 exit 0

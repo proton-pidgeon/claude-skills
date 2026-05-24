@@ -39,9 +39,9 @@ if [ -d "$MEM_DIR/.git" ]; then
   fi
 fi
 
-# Refresh the marketplace clone so the next session sees latest skills/agents/commands.
-# (Plugin changes apply on restart.) Pull the clone directly to avoid spawning claude.
-MKT_DIR="$CLAUDE_HOME/plugins/marketplaces/kevdunn"
-[ -d "$MKT_DIR/.git" ] && git -C "$MKT_DIR" pull --rebase --quiet 2>/dev/null || true
+# NOTE: plugin/marketplace CODE is intentionally NOT auto-pulled here. Updating plugin
+# code is a deliberate act — run `/plugin marketplace update kevdunn` then restart to pull
+# reviewed changes. This stops a compromised upstream from auto-executing on every host
+# each session. Only the (data-only) memory vault syncs automatically.
 
 exit 0

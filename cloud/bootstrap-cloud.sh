@@ -21,7 +21,13 @@ MEM="/tmp/claude-memory"
 log() { echo "[kev-cloud] $*" >&2; }
 
 # ── 1. Skills + commands (reliable) ────────────────────────────────────────
-[ -d "$RES/.git" ] || git clone --depth 1 "$SKILLS_REPO" "$RES" 2>/dev/null || true
+# Pinned to a reviewed commit so a compromised upstream main can't auto-inject into
+# cloud sessions. Bump PIN_REF (and the curl SHA in cloud/settings.json) when cloud
+# scripts change. Override with KEV_PIN_REF if you need a different ref.
+PIN_REF="${KEV_PIN_REF:-main}"
+if [ ! -d "$RES/.git" ]; then
+  git clone "$SKILLS_REPO" "$RES" 2>/dev/null && git -C "$RES" checkout -q "$PIN_REF" 2>/dev/null || true
+fi
 if [ -d "$RES/plugins/kev/skills" ]; then
   mkdir -p "$PROJ/.claude/skills"
   cp -R "$RES"/plugins/kev/skills/* "$PROJ/.claude/skills/" 2>/dev/null || true

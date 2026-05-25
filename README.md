@@ -56,7 +56,7 @@ Prefer to do it by hand? `/plugin marketplace add proton-pidgeon/claude-skills` 
 
 | Type | Items |
 |---|---|
-| Skills | `/ingest` (design docs → specs/tasks), `/shannon` (Keygraph pentester wrapper) |
+| Skills | `/ingest` (design docs → specs/tasks), `/shannon` (Keygraph pentester wrapper), `/understand` (deep-review a repo → on-screen briefing + durable project memory) |
 | Commands | `/telegram` (notify via your bot) |
 | Agents | `arch-infrastructure-reviewer`, `ux-design-reviewer` |
 | Hooks | fully-automatic memory sync (see below) |
@@ -95,7 +95,7 @@ permission-bypass flags and host-specific plugins — set those per machine.
 ├── .claude-plugin/marketplace.json     # marketplace manifest (name: kevdunn)
 ├── plugins/kev/                        # the plugin
 │   ├── .claude-plugin/plugin.json
-│   ├── skills/{ingest,shannon}/SKILL.md
+│   ├── skills/{ingest,shannon,understand}/SKILL.md
 │   ├── commands/telegram.md
 │   ├── agents/{arch-infrastructure,ux-design}-reviewer.md
 │   ├── hooks/hooks.json                # SessionStart/SessionEnd sync

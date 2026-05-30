@@ -10,7 +10,7 @@ set -uo pipefail
 PROJ="${CLAUDE_PROJECT_DIR:-$PWD}"
 RES="${KEV_RES_DIR:-/tmp/kev-resources}"
 MEM="${KEV_MEM_DIR:-/tmp/claude-memory}"
-SKILLS_REF="d239288cb9efb5bfb6d9f9b06bc126d75b7ac675"
+SKILLS_REF="6e700702f65e7b4dc6d279ee181d26e236390bd4"  # main@#10 — includes ingest/shannon/understand/peggy
 log(){ echo "[kev-setup] $*" >&2; }
 
 # Skills + commands (the mechanism your ingest skill already proved works in cloud)

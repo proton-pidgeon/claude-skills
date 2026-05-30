@@ -15,9 +15,10 @@ log() { [ -n "$QUIET" ] && return 0; echo "[kev-sync] $*" >&2; }
 
 notify_telegram() {
   # Self-contained: source local (gitignored) creds and hit the Bot API directly.
-  [ -f "$HOME/.claude/.telegram" ] || return 0
+  local tg="${CLAUDE_HOME:-$HOME/.claude}/.telegram"
+  [ -f "$tg" ] || return 0
   # shellcheck disable=SC1090,SC1091
-  . "$HOME/.claude/.telegram" 2>/dev/null || return 0
+  . "$tg" 2>/dev/null || return 0
   [ -n "${TELEGRAM_BOT_TOKEN:-}" ] && [ -n "${TELEGRAM_CHAT_ID:-}" ] || return 0
   curl -fsS --max-time 10 \
     "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \

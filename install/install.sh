@@ -6,7 +6,7 @@
 #
 # Idempotent. What it does:
 #   1. Adds the `kevdunn` marketplace and installs the `kev` plugin
-#      (skills: ingest, shannon; command: telegram; agents: arch + ux reviewers;
+#      (skills: ingest, shannon, understand, peggy; command: telegram; agents: arch + ux reviewers;
 #       plus the fully-automatic memory-sync hooks).
 #   2. Deep-merges install/settings.shared.json into ~/.claude/settings.json
 #      (timestamped backup first; your host-only keys are preserved).

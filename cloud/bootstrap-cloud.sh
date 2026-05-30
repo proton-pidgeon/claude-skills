@@ -15,7 +15,7 @@ exec 3>&1 1>&2          # logs -> stderr; fd 3 holds the real stdout for the JSO
 PROJ="${CLAUDE_PROJECT_DIR:-$PWD}"
 RES="${KEV_RES_DIR:-/tmp/kev-resources}"
 MEM="${KEV_MEM_DIR:-/tmp/claude-memory}"
-SKILLS_REF="${KEV_PIN_REF:-d239288cb9efb5bfb6d9f9b06bc126d75b7ac675}"
+SKILLS_REF="${KEV_PIN_REF:-6e700702f65e7b4dc6d279ee181d26e236390bd4}"  # main@#10 — includes ingest/shannon/understand/peggy
 SKILLS_URL="https://github.com/proton-pidgeon/claude-skills.git"
 MEM_PATH="proton-pidgeon/claude-memory.git"
 

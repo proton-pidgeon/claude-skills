@@ -44,10 +44,12 @@ curl -fsSL https://raw.githubusercontent.com/proton-pidgeon/claude-skills/main/i
 
 (Windows native PowerShell: `install/install.ps1`.) Then restart Claude Code.
 
-> **Windows note:** the bootstrap (`install.ps1`) is pure PowerShell, but the runtime
-> memory-sync hooks invoke `bash`, so keep **Git for Windows** on PATH. Without it the
-> sync hooks no-op harmlessly (no crash) — you'd just sync memory manually until bash is
-> available. A native-PowerShell sync hook is a planned follow-up.
+> **Windows note:** the plugin's sync hooks (`hooks.json`) invoke `bash`, so on
+> macOS/Linux — or Windows with **Git for Windows** on PATH — they work as-is. For a pure
+> Windows host, `install.ps1` also installs **native-PowerShell sync hooks**
+> (`kev-sync-{pull,push}.ps1`, fetched into `~\.claude\` and wired into `settings.json`),
+> so memory sync works without bash. The two are idempotent, so a Windows host that has
+> both bash and PowerShell can run both harmlessly (the second pull/push is a no-op).
 
 Prefer to do it by hand? `/plugin marketplace add proton-pidgeon/claude-skills` then
 `/plugin install kev@kevdunn`.
@@ -56,7 +58,7 @@ Prefer to do it by hand? `/plugin marketplace add proton-pidgeon/claude-skills` 
 
 | Type | Items |
 |---|---|
-| Skills | `/ingest` (design docs → specs/tasks), `/shannon` (Keygraph pentester wrapper), `/understand` (deep-review a repo → on-screen briefing + durable project memory) |
+| Skills | `/ingest` (design docs → specs/tasks), `/shannon` (Keygraph pentester wrapper), `/understand` (deep-review a repo → on-screen briefing + durable project memory), `/peggy` (onboard a local service into the Peggy gateway) |
 | Commands | `/telegram` (notify via your bot) |
 | Agents | `arch-infrastructure-reviewer`, `ux-design-reviewer` |
 | Hooks | fully-automatic memory sync (see below) |
@@ -95,11 +97,11 @@ permission-bypass flags and host-specific plugins — set those per machine.
 ├── .claude-plugin/marketplace.json     # marketplace manifest (name: kevdunn)
 ├── plugins/kev/                        # the plugin
 │   ├── .claude-plugin/plugin.json
-│   ├── skills/{ingest,shannon,understand}/SKILL.md
+│   ├── skills/{ingest,shannon,understand,peggy}/SKILL.md
 │   ├── commands/telegram.md
 │   ├── agents/{arch-infrastructure,ux-design}-reviewer.md
 │   ├── hooks/hooks.json                # SessionStart/SessionEnd sync
-│   └── scripts/kev-sync-{pull,push}.sh
+│   └── scripts/kev-sync-{pull,push}.{sh,ps1}   # bash + native-PowerShell sync
 ├── install/
 │   ├── install.sh / install.ps1        # per-host bootstrap
 │   └── settings.shared.json            # portable preferences (jq-merged)

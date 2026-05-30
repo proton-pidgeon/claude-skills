@@ -10,7 +10,7 @@ plus what a repo-committed `SessionStart` hook pulls in. This folder bridges tha
 
 1. **Skills + commands:** clones `claude-skills` (pinned) and copies the `kev`
    plugin's skills/commands into the session's `.claude/`, so `/ingest`, `/shannon`,
-   `/telegram` etc. are available.
+   `/understand`, `/peggy`, and `/telegram` are available.
 2. **Memory:** clones the `claude-memory` vault with `KEV_MEM_TOKEN`, then emits the
    vault's contents (the `MEMORY.md` index plus every fact file) as SessionStart
    **`additionalContext`** — text injected straight into the model's context. This does

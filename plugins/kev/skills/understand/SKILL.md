@@ -12,28 +12,36 @@ The deliverable is twofold: a **screen briefing** for the human right now, and a
 ## Operating rules
 
 - **Inspect tests, never run them.** Read the test setup and infer coverage and health from it. Do not execute the suite (or any build/run command with side effects) as part of this review.
-- **Read-only review.** `/understand` does not modify project code, install dependencies, or open PRs. The only thing it writes is the memory entry (see step 3).
+- **Read-only review.** `/understand` does not modify project code, install dependencies, or open PRs. `git fetch` is allowed (it's read-only — it updates remote-tracking refs without touching the working tree); `git pull`/`merge`/`checkout`/`reset` are **not**. The only thing it writes is the memory entry (see step 3).
 - **Synthesize, don't dump.** The user wants conclusions, not file listings. Use sub-agents to fan out so the raw output stays out of the main thread.
 
 ## Step 1 — Deep review
 
 Build a real mental model of the project. Work in this order.
 
-### 1a. Orient
+### 1a. Confirm you're reviewing current code
+
+Before forming any judgment, make sure the checkout reflects the latest state — a stale or diverged working tree produces a stale briefing, and silently reviewing the wrong code is worse than saying so.
+
+- Run `git fetch` (read-only — see the operating rules), then compare `HEAD` to its upstream (`git status -sb`, `git rev-list --left-right --count @{u}...HEAD`): is the branch **up to date**, **behind** (the user should `git pull` before trusting the review), **ahead** (unpushed commits), or **diverged**?
+- Note uncommitted/untracked changes — these are in-flight work the review should account for, not ignore.
+- **If the branch is behind or diverged, say so up front** and ask whether to proceed against the current checkout or pause while the user syncs. Don't run `pull`/`merge`/`checkout` yourself — confirming freshness is read-only. (No upstream or no network? Note it and proceed against the local checkout.)
+
+### 1b. Orient
 
 Read the high-signal files first:
 
 - `README*`, `CLAUDE.md`/`AGENTS.md`, `CONTRIBUTING*`, and any `docs/`, `design/`, `spec*`, `*-design.md`, `*-spec.md` files.
 - The package/build manifest(s): `package.json`, `pyproject.toml`/`setup.py`, `Cargo.toml`, `go.mod`, `pom.xml`/`build.gradle`, `Gemfile`, `*.csproj`, etc. Note language, runtime, frameworks, scripts, and dependencies.
-- `git log --oneline -30` and `git status -sb` — the recent commits reveal the project's trajectory and current phase; uncommitted work reveals what's in flight.
+- `git log --oneline -30` — the recent commits reveal the project's trajectory and current phase.
 
-### 1b. Map the architecture
+### 1c. Map the architecture
 
 - Survey the source tree. Identify entry points, the main modules/packages, and how they connect.
 - Identify the layers/components and the data flow between them.
 - **For anything beyond a small repo, dispatch parallel `Explore` (or `general-purpose`) sub-agents** to map subsystems concurrently — e.g. one per top-level source directory — and have each return a tight summary. Keep file dumps in the sub-agents; only conclusions come back.
 
-### 1c. Assess the backlog
+### 1d. Assess the backlog
 
 Gather "what's left" from the most reliable signals first, and reconcile them:
 
@@ -43,7 +51,7 @@ Gather "what's left" from the most reliable signals first, and reconcile them:
 4. **Test health (inspect only)** — read test files/config: what's covered, what's conspicuously untested, and any `skip`/`xfail`/`.only`/commented-out tests. Do **not** run the suite.
 5. **Open issues / PRs** — if `gh` is available and the repo has a GitHub remote, skim `gh issue list` and `gh pr list` for declared work. Best-effort; skip silently if unavailable.
 
-### 1d. Form a priority judgment
+### 1e. Form a priority judgment
 
 Order the backlog into a recommended sequence using: blocking dependencies first → correctness/security risk → the project's own stated next phase → high impact-to-effort → polish. This ordering is your judgment as a reviewer; make it and own it.
 
@@ -58,7 +66,7 @@ Print exactly these three sections to the user, concise and skimmable:
 including the one distinction that makes it itself. No filler.>
 
 **Backlog** — what's still outstanding
-- <grouped, deduplicated items reconciled across the signals in 1c>
+- <grouped, deduplicated items reconciled across the signals in 1d>
 - <note done-vs-pending phases if the project is phase-structured>
 - <call out the design↔implementation gaps and any inspected test gaps>
 
@@ -93,7 +101,7 @@ metadata:
 
 **Backlog (as of <YYYY-MM-DD>):** <the reconciled outstanding work, condensed.>
 
-**Recommended priority order:** <the ranked next steps from step 1d.>
+**Recommended priority order:** <the ranked next steps from step 1e.>
 
 **Pointers:** <repo path; the load-bearing design/spec/tasks files to read first — link, don't duplicate them.>
 ```

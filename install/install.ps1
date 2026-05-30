@@ -6,7 +6,8 @@
 # Idempotent. What it does:
 #   1. Adds the `kevdunn` marketplace and installs the `kev` plugin.
 #   2. Deep-merges install/settings.shared.json into ~\.claude\settings.json
-#      (timestamped backup first; your host-only keys preserved).
+#      (timestamped backup first; your host-only keys preserved), and wires native
+#      PowerShell memory-sync hooks so sync works without Git-for-Windows bash.
 #   3. Clones the memory vault (proton-pidgeon/claude-memory) to the path named by
 #      autoMemoryDirectory (default ~\claude-memory) so memory syncs across hosts.
 #   4. Reminds you which secrets are per-host and never synced.
@@ -43,6 +44,22 @@ function Merge-Object($base, $shared) {
     }
 }
 
+# Add a hook $entry under hooks.$event in $data, idempotently. A hook whose command
+# already contains $marker is left untouched (so re-running install.ps1 is a no-op).
+function Add-PsHook($data, $event, $entry, $marker) {
+    if (-not $data.PSObject.Properties['hooks']) {
+        $data | Add-Member -NotePropertyName 'hooks' -NotePropertyValue ([pscustomobject]@{}) -Force
+    }
+    $hooks = $data.hooks
+    $existing = if ($hooks.PSObject.Properties[$event]) { @($hooks.$event) } else { @() }
+    foreach ($e in $existing) {
+        foreach ($h in @($e.hooks)) {
+            if ($h.command -and ($h.command -like "*$marker*")) { return }  # already wired
+        }
+    }
+    $hooks | Add-Member -NotePropertyName $event -NotePropertyValue (@($existing) + $entry) -Force
+}
+
 # ── 1. Marketplace + plugin ────────────────────────────────────────────────
 Write-Host "→ Adding marketplace + installing the kev plugin"
 try { claude plugin marketplace add proton-pidgeon/claude-skills 2>$null } catch {}
@@ -59,6 +76,37 @@ $shared = (Invoke-WebRequest -Uri "$RepoRawBase/install/settings.shared.json" -U
 $data   = Get-Content -Raw -Path $Settings | ConvertFrom-Json
 if (-not $data) { $data = [pscustomobject]@{} }
 Merge-Object $data $shared
+
+# ── 2b. Native PowerShell memory-sync hooks (Windows, no Git-bash needed) ───
+# The plugin ships bash sync hooks (hooks.json) for macOS/Linux/Git-bash. On a pure
+# Windows host those need bash on PATH; these .ps1 ports do not. We fetch them next to
+# settings and wire equivalent SessionStart/SessionEnd hooks into settings.json. The bash
+# and PowerShell hooks are both idempotent, so a Windows+Git-bash host running both is
+# harmless (the second pull/push is a no-op).
+$psExe = $null
+if (Get-Command pwsh -ErrorAction SilentlyContinue) { $psExe = 'pwsh' }
+elseif (Get-Command powershell -ErrorAction SilentlyContinue) { $psExe = 'powershell' }
+if ($psExe) {
+    $pullPath = Join-Path $ClaudeHome 'kev-sync-pull.ps1'
+    $pushPath = Join-Path $ClaudeHome 'kev-sync-push.ps1'
+    try {
+        (Invoke-WebRequest -Uri "$RepoRawBase/plugins/kev/scripts/kev-sync-pull.ps1" -UseBasicParsing -TimeoutSec 15).Content | Set-Content -Path $pullPath -Encoding UTF8
+        (Invoke-WebRequest -Uri "$RepoRawBase/plugins/kev/scripts/kev-sync-push.ps1" -UseBasicParsing -TimeoutSec 15).Content | Set-Content -Path $pushPath -Encoding UTF8
+        $startEntry = [pscustomobject]@{
+            matcher = 'startup|resume'
+            hooks   = @([pscustomobject]@{ type = 'command'; command = "$psExe -NoProfile -ExecutionPolicy Bypass -File `"$pullPath`""; timeout = 60 })
+        }
+        $endEntry = [pscustomobject]@{
+            hooks = @([pscustomobject]@{ type = 'command'; command = "$psExe -NoProfile -ExecutionPolicy Bypass -File `"$pushPath`""; timeout = 60 })
+        }
+        Add-PsHook $data 'SessionStart' $startEntry 'kev-sync-pull.ps1'
+        Add-PsHook $data 'SessionEnd'   $endEntry   'kev-sync-push.ps1'
+        Write-Host "  Native PowerShell sync hooks wired ($psExe)"
+    } catch {
+        Write-Warning "Could not install PowerShell sync hooks (will fall back to the plugin's bash hooks): $_"
+    }
+}
+
 ($data | ConvertTo-Json -Depth 32) + "`n" | Set-Content -Path $Settings -Encoding UTF8
 Write-Host "  Settings merged"
 

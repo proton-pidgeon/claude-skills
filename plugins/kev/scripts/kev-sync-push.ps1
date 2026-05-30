@@ -11,9 +11,10 @@
 $ErrorActionPreference = 'SilentlyContinue'
 
 function Send-TelegramAlert($text) {
-    # Self-contained: read local (gitignored) creds from ~\.claude\.telegram (KEY=value,
+    # Self-contained: read local (gitignored) creds from <CLAUDE_HOME>\.telegram (KEY=value,
     # optionally `export`-prefixed / quoted) and hit the Bot API directly.
-    $tg = Join-Path $HOME '.claude\.telegram'
+    $claudeHome = if ($env:CLAUDE_HOME) { $env:CLAUDE_HOME } else { Join-Path $HOME '.claude' }
+    $tg = Join-Path $claudeHome '.telegram'
     if (-not (Test-Path $tg)) { return }
     $tok = $null; $chat = $null
     foreach ($line in (Get-Content $tg)) {

@@ -58,7 +58,7 @@ Prefer to do it by hand? `/plugin marketplace add proton-pidgeon/claude-skills` 
 
 | Type | Items |
 |---|---|
-| Skills | `/ingest` (design docs → specs/tasks), `/shannon` (Keygraph pentester wrapper), `/understand` (deep-review a repo → on-screen briefing + durable project memory), `/peggy` (onboard a local service into the Peggy gateway) |
+| Skills | `/ingest` (design docs → specs/tasks), `/implement` (autonomously build a `tasks/` backlog via worktree-isolated parallel agents), `/shannon` (Keygraph pentester wrapper), `/understand` (deep-review a repo → on-screen briefing + durable project memory), `/peggy` (onboard a local service into the Peggy gateway) |
 | Commands | `/telegram` (notify via your bot) |
 | Agents | `arch-infrastructure-reviewer`, `ux-design-reviewer` |
 | Hooks | fully-automatic memory sync (see below) |
@@ -97,7 +97,7 @@ permission-bypass flags and host-specific plugins — set those per machine.
 ├── .claude-plugin/marketplace.json     # marketplace manifest (name: kevdunn)
 ├── plugins/kev/                        # the plugin
 │   ├── .claude-plugin/plugin.json
-│   ├── skills/{ingest,shannon,understand,peggy}/SKILL.md
+│   ├── skills/{ingest,implement,shannon,understand,peggy}/SKILL.md
 │   ├── commands/telegram.md
 │   ├── agents/{arch-infrastructure,ux-design}-reviewer.md
 │   ├── hooks/hooks.json                # SessionStart/SessionEnd sync

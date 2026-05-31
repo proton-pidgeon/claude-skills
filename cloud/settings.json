@@ -7,7 +7,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "curl -fsSL --max-time 20 https://raw.githubusercontent.com/proton-pidgeon/claude-skills/ceb8b240fa2c05d534d3ef7d55eefdcc4393d4fc/cloud/bootstrap-cloud.sh | bash",
+            "command": "curl -fsSL --max-time 20 https://raw.githubusercontent.com/proton-pidgeon/claude-skills/main/cloud/bootstrap-cloud.sh | bash",
             "timeout": 60
           }
         ]

@@ -3,8 +3,12 @@
 # Cloud ignores ~/.claude, so this (run by a repo-committed .claude/settings.json
 # SessionStart hook) brings Kev's resources into the ephemeral session:
 #   - Skills + commands: copied into the project's .claude/  (side effects -> stderr)
-#   - Memory: the private vault is cloned with KEV_MEM_TOKEN and its contents are emitted
-#     as SessionStart `additionalContext` (injected straight into the model context).
+#   - Memory: the private vault is cloned with KEV_MEM_TOKEN, then delivered TWO ways:
+#       (a) written to the project's .claude/CLAUDE.md (or .claude/rules/kev-memory.md if
+#           the repo ships its own CLAUDE.md) — a FILE, which cloud auto-loads reliably;
+#       (b) emitted as SessionStart `additionalContext` — works on surfaces that read it.
+#     Cloud reliably ingests files but not hook stdout, so (a) is the load-bearing path in
+#     cloud and (b) is belt-and-suspenders for surfaces that honor additionalContext.
 # Only the final JSON goes to real stdout; everything else goes to stderr.
 
 set -uo pipefail
@@ -64,9 +68,29 @@ if [ ! -d "$MEM/.git" ] && [ -n "${KEV_MEM_TOKEN:-}" ]; then
   fi
 fi
 
-# 3) Emit memory as SessionStart additionalContext (JSON on real stdout = fd 3)
+# 3) Assemble the vault into one markdown blob, then deliver it as a FILE (the path cloud
+#    actually ingests — same mechanism as skills). Files reach the model reliably in cloud;
+#    hook stdout (additionalContext, step 4) does not, so this is the load-bearing path.
 if [ -f "$MEM/MEMORY.md" ]; then
   CTX="$( { echo "# Your synced Claude memory (private claude-memory vault)"; echo; echo "## MEMORY.md (index)"; cat "$MEM/MEMORY.md"; echo; for f in "$MEM"/*.md; do b="$(basename "$f")"; [ "$b" = "MEMORY.md" ] && continue; echo "## $b"; cat "$f"; echo; done; } )"
+
+  # Prefer .claude/CLAUDE.md (canonical, definitely loaded). If the repo ships its own
+  # CLAUDE.md, don't clobber it — fall back to .claude/rules/kev-memory.md instead.
+  mkdir -p "$PROJ/.claude/rules"
+  MEMOUT="$PROJ/.claude/CLAUDE.md"
+  [ -f "$MEMOUT" ] && MEMOUT="$PROJ/.claude/rules/kev-memory.md"
+  printf '%s\n' "$CTX" > "$MEMOUT" && echo "[kev-cloud] wrote memory file -> $MEMOUT"
+
+  # Never let the injected memory file get committed to the repo (local-only).
+  if [ -d "$PROJ/.git" ]; then
+    EX="$PROJ/.git/info/exclude"; mkdir -p "$(dirname "$EX")"; touch "$EX"
+    REL="${MEMOUT#"$PROJ"/}"
+    grep -qxF "$REL" "$EX" 2>/dev/null || echo "$REL" >> "$EX"
+  fi
+
+  # 4) Belt-and-suspenders: also emit as SessionStart additionalContext for surfaces that
+  #    honor it (JSON on real stdout = fd 3). On cloud this may be ignored; the file above
+  #    is what carries memory there.
   if command -v jq >/dev/null 2>&1; then
     jq -n --arg c "$CTX" '{hookSpecificOutput:{hookEventName:"SessionStart",additionalContext:$c}}' >&3
   else

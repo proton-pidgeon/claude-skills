@@ -1,8 +1,8 @@
 {
   "$schema": "https://anthropic.com/claude-code/plugin.schema.json",
   "name": "kev",
-  "description": "Personal skills (ingest, implement, shannon, understand, peggy), commands (telegram), review agents (architecture, UX/accessibility), and cross-surface sync hooks.",
-  "version": "0.5.0",
+  "description": "Personal skills (ingest, implement, security-test, understand, peggy), commands (telegram), review agents (architecture, UX/accessibility), and cross-surface sync hooks.",
+  "version": "0.6.0",
   "author": {
     "name": "Kev Dunn",
     "email": "kevdunn@gmail.com"

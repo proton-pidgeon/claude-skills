@@ -9,7 +9,7 @@ plus what a repo-committed `SessionStart` hook pulls in. This folder bridges tha
 `bootstrap-cloud.sh` runs at session start (only when `CLAUDE_CODE_REMOTE=true`) and:
 
 1. **Skills + commands:** clones `claude-skills` (pinned) and copies the `kev`
-   plugin's skills/commands into the session's `.claude/`, so `/ingest`, `/shannon`,
+   plugin's skills/commands into the session's `.claude/`, so `/ingest`, `/security-test`,
    `/understand`, `/peggy`, and `/telegram` are available.
 2. **Memory:** clones the `claude-memory` vault with `KEV_MEM_TOKEN`, then emits the
    vault's contents (the `MEMORY.md` index plus every fact file) as SessionStart

@@ -32,7 +32,10 @@
 set -uo pipefail   # deliberately NOT -e: per-host failures are handled, not fatal
 
 FLEET_HOSTS="${FLEET_HOSTS:-$HOME/.claude/fleet-hosts}"
-SSH_OPTS="${SSH_OPTS:--o ConnectTimeout=10 -o BatchMode=yes}"
+# accept-new = trust a new host's key on first contact (TOFU) but still refuse a
+# CHANGED key — so a never-seen fleet host doesn't fail with "Host key
+# verification failed" under BatchMode, while key-swap MITM is still caught.
+SSH_OPTS="${SSH_OPTS:--o ConnectTimeout=10 -o BatchMode=yes -o StrictHostKeyChecking=accept-new}"
 
 # Locate the tailscale CLI (PATH, then the macOS app bundle).
 ts() {

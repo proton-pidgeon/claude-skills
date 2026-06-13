@@ -1,7 +1,7 @@
 #requires -version 5.1
 <#
 .SYNOPSIS
-  Windows port of kev-gui-teardown.sh — tear down ONLY the VS Code instance the
+  Windows port of kev-gui-teardown.sh -- tear down ONLY the VS Code instance the
   current Claude Code session is running inside (as opened by code-gui.ps1), from
   within that very session. Backs the /gui-teardown slash command on Windows.
 
@@ -11,7 +11,7 @@
   so the first invocation resolves context, spawns a DETACHED hidden worker that
   waits a few seconds (letting Claude stream its reply), then tears down.
 
-  ── HOW IT TARGETS JUST THIS INSTANCE ─────────────────────────────────────────
+  -- HOW IT TARGETS JUST THIS INSTANCE -----------------------------------------
   code-gui.ps1 launches each repo as its own VS Code instance with a unique
   --user-data-dir ($GUI_DATA_ROOT\<repo>). That path is an explicit per-instance
   marker in the main process's command line. We derive this repo's user-data-dir
@@ -30,7 +30,7 @@
 
   Self-contained: ships with the kev@kevdunn plugin, no repo checkout required.
 
-  ── STATUS: UNVERIFIED ON WINDOWS ─────────────────────────────────────────────
+  -- STATUS: UNVERIFIED ON WINDOWS ---------------------------------------------
   Authored on macOS; needs a real Windows run before it is trusted (CommandLine
   visibility via CIM, CloseMainWindow on the main process, detached survival).
 
@@ -70,13 +70,15 @@ function Get-CodeProcesses {
 function Test-IsMain { param($Proc) $Proc.CommandLine -and ($Proc.CommandLine -notmatch '--type=') }
 function Get-ThisInstanceMain {
   param([string] $UserData)
-  Get-CodeProcesses | Where-Object {
-    (Test-IsMain $_) -and $_.CommandLine.ToLower().Contains($UserData.ToLower())
-  }
+  # Match --user-data-dir as a whole argument (a boundary -- quote, whitespace,
+  # or end -- must follow), NOT a loose substring: repo 'foo' must not match
+  # '...\foo2'. -match is case-insensitive, which is right for Windows paths.
+  $pat = '--user-data-dir[=\s]+"?' + [regex]::Escape($UserData) + '(?=["\s]|$)'
+  Get-CodeProcesses | Where-Object { (Test-IsMain $_) -and ($_.CommandLine -match $pat) }
 }
 function Test-AnyCodeMain { @(Get-CodeProcesses | Where-Object { Test-IsMain $_ }).Count -gt 0 }
 
-# ── First invocation: schedule a detached worker, return immediately ─────────
+# -- First invocation: schedule a detached worker, return immediately ---------
 if (-not $Run) {
   $found = @(Get-ThisInstanceMain -UserData $userData).Count -gt 0
   Start-Process -FilePath 'powershell.exe' `
@@ -88,41 +90,44 @@ if (-not $Run) {
     Write-Host "instance (repo '$Repo'). Other repos' windows stay open. Session ends then."
   } else {
     Write-Host "Teardown scheduled in ${Delay}s (detached). Couldn't pinpoint this repo's"
-    Write-Host "isolated instance ('$Repo') — will try closing its window, else quit VS Code"
+    Write-Host "isolated instance ('$Repo') -- will try closing its window, else quit VS Code"
     Write-Host "app-wide. This session ends then."
   }
   exit 0
 }
 
-# ── Detached worker ──────────────────────────────────────────────────────────
+# -- Detached worker ----------------------------------------------------------
 Start-Sleep -Seconds $Delay
 
+# Force a tree-kill of one VS Code instance by its main PID. VS Code on Windows
+# does not expose a usable MainWindowHandle (it reads 0), so CloseMainWindow /
+# WM_CLOSE can't reach the window, and 'taskkill /T' without /F errors on its
+# background children. 'taskkill /T /F' is the reliable path: it kills this main
+# and its whole process tree, scoped to this instance only (other isolated
+# instances are separate trees). 2>$null so taskkill's stderr never surfaces.
 function Stop-CodeProcess {
   param([int] $ProcId)
-  try { (Get-Process -Id $ProcId -ErrorAction Stop).CloseMainWindow() | Out-Null } catch { }
-  for ($i = 0; $i -lt 8; $i++) {
+  & taskkill.exe /PID $ProcId /T /F 2>$null | Out-Null
+  for ($i = 0; $i -lt 5; $i++) {
     if (-not (Get-Process -Id $ProcId -ErrorAction SilentlyContinue)) { return }
     Start-Sleep -Seconds 1
   }
-  & taskkill.exe /PID $ProcId /T /F 2>$null | Out-Null   # /T kills the whole tree
 }
 
 $mains = @(Get-ThisInstanceMain -UserData $userData)
 if ($mains.Count -gt 0) {
-  foreach ($m in $mains) { Stop-CodeProcess -ProcId $m.ProcessId }   # isolated: quit just it
+  foreach ($m in $mains) { Stop-CodeProcess -ProcId $m.ProcessId }   # isolated: tree-kill just it
 } else {
-  $byTitle = @(Get-Process -Name 'Code', 'Code - Insiders' -ErrorAction SilentlyContinue |
-    Where-Object { $_.MainWindowTitle -and $_.MainWindowTitle -like "*$Repo*" })
-  if ($byTitle.Count -gt 0) {
-    foreach ($p in $byTitle) { Stop-CodeProcess -ProcId $p.Id }       # legacy/shared: close our window
-  } else {
-    foreach ($m in @(Get-CodeProcesses | Where-Object { Test-IsMain $_ })) {
-      Stop-CodeProcess -ProcId $m.ProcessId                           # last resort: app-wide
-    }
+  # No isolated instance matched. VS Code on Windows exposes no usable window
+  # title/handle, so we can't single out one window of a shared process -- fall
+  # back to the last resort: tree-kill every VS Code instance (this also ends
+  # sibling repos' windows; with the isolated launcher this should not occur).
+  foreach ($m in @(Get-CodeProcesses | Where-Object { Test-IsMain $_ })) {
+    Stop-CodeProcess -ProcId $m.ProcessId
   }
 }
 
-# Release the keep-awake assertion code-gui.ps1 started — ONLY if no VS Code
+# Release the keep-awake assertion code-gui.ps1 started -- ONLY if no VS Code
 # instance remains, so other still-open code-gui windows keep the display awake.
 if (-not (Test-AnyCodeMain)) {
   try {

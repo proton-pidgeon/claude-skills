@@ -87,11 +87,14 @@ $psExe = $null
 if (Get-Command pwsh -ErrorAction SilentlyContinue) { $psExe = 'pwsh' }
 elseif (Get-Command powershell -ErrorAction SilentlyContinue) { $psExe = 'powershell' }
 if ($psExe) {
-    $pullPath = Join-Path $ClaudeHome 'kev-sync-pull.ps1'
-    $pushPath = Join-Path $ClaudeHome 'kev-sync-push.ps1'
+    $pullPath  = Join-Path $ClaudeHome 'kev-sync-pull.ps1'
+    $pushPath  = Join-Path $ClaudeHome 'kev-sync-push.ps1'
+    $indexPath = Join-Path $ClaudeHome 'kev-memory-index.mjs'
     try {
         (Invoke-WebRequest -Uri "$RepoRawBase/plugins/kev/scripts/kev-sync-pull.ps1" -UseBasicParsing -TimeoutSec 15).Content | Set-Content -Path $pullPath -Encoding UTF8
         (Invoke-WebRequest -Uri "$RepoRawBase/plugins/kev/scripts/kev-sync-push.ps1" -UseBasicParsing -TimeoutSec 15).Content | Set-Content -Path $pushPath -Encoding UTF8
+        # MEMORY.md index regenerator (Node), resolved by the hooks via $PSScriptRoot.
+        (Invoke-WebRequest -Uri "$RepoRawBase/plugins/kev/scripts/kev-memory-index.mjs" -UseBasicParsing -TimeoutSec 15).Content | Set-Content -Path $indexPath -Encoding UTF8
         $startEntry = [pscustomobject]@{
             matcher = 'startup|resume'
             hooks   = @([pscustomobject]@{ type = 'command'; command = "$psExe -NoProfile -ExecutionPolicy Bypass -File `"$pullPath`""; timeout = 60 })

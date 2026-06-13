@@ -9,7 +9,7 @@
   "plugins": [
     {
       "name": "kev",
-      "description": "Personal skills (ingest, implement, security-test, understand, peggy), commands (telegram, gui-teardown), review agents (architecture, UX/accessibility), and cross-surface sync hooks.",
+      "description": "Personal skills (ingest, implement, security-test, understand, peggy, commit), commands (telegram, gui-teardown), review agents (architecture, UX/accessibility), and cross-surface sync hooks.",
       "author": {
         "name": "Kev Dunn"
       },

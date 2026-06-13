@@ -32,13 +32,25 @@ parallel SSH, and reporting deterministically.
 
 ## How to invoke the script
 
-It ships with the plugin at:
+It ships with the plugin in two parity implementations — pick by the host **you are
+invoking from**:
 
 ```
+# macOS / Linux (or Windows with Git Bash on PATH):
 ~/.claude/plugins/marketplaces/kevdunn/plugins/kev/scripts/kev-fleet.sh
+# native Windows (no bash):
+~\.claude\plugins\marketplaces\kevdunn\plugins\kev\scripts\kev-fleet.ps1
 ```
 
-Pick the invocation from what the user asked:
+The `.ps1` is a behaviour-for-behaviour port (same flags, same allowlist, same per-host
+OS detection and report) that needs no bash or python — it uses PowerShell's own JSON
+parser and `Start-Job` for parallelism, and prints ASCII status markers (`[OK]`/`[XX]`/
+`[--]`) for Windows consoles. Both target the *same* fleet of remote hosts; they differ
+only in the shell running the orchestration. On a Windows host that has Git Bash, either
+works — prefer the `.ps1` to avoid a bash dependency.
+
+Pick the invocation from what the user asked (shown for bash; on native Windows use
+`pwsh <script.ps1>` / `powershell -File <script.ps1>` with the same flags):
 
 - **Sync the plugin everywhere (default):**
   `bash <script>` — runs `claude plugin marketplace update kevdunn` on each host.

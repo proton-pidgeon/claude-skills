@@ -29,6 +29,13 @@ $memDir = $memDir -replace '^~[/\\]', ($HOME.TrimEnd('\') + '\') -replace '/', '
 if (Test-Path (Join-Path $memDir '.git')) {
     git -C $memDir pull --rebase --autostash --quiet 2>$null
     if ($LASTEXITCODE -ne 0) { git -C $memDir rebase --abort 2>$null }
+    # MEMORY.md is derived from per-file frontmatter — rebuild it so the session
+    # starts with an index matching the freshly pulled files. The change stays
+    # uncommitted; the SessionEnd push hook commits it.
+    $indexer = Join-Path $PSScriptRoot 'kev-memory-index.mjs'
+    if ((Get-Command node -ErrorAction SilentlyContinue) -and (Test-Path $indexer)) {
+        node $indexer $memDir 2>$null
+    }
 }
 
 # NOTE: plugin/marketplace CODE is intentionally NOT auto-pulled here — updating plugin

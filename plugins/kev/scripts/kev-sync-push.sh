@@ -46,6 +46,16 @@ esac
 HOST="$(hostname -s 2>/dev/null || hostname 2>/dev/null || echo unknown)"
 STAMP="$(date -u +%FT%TZ 2>/dev/null || date)"
 
+# MEMORY.md is derived from per-file frontmatter — rebuild it before committing
+# so what lands upstream is canonical (direct index edits get reconciled away).
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+regen_index() {
+  if command -v node >/dev/null 2>&1 && [ -f "$SCRIPT_DIR/kev-memory-index.mjs" ]; then
+    node "$SCRIPT_DIR/kev-memory-index.mjs" "$MEM_DIR" 2>&1 | while IFS= read -r l; do log "$l"; done
+  fi
+}
+regen_index
+
 # Stage and commit only if there is something to commit.
 if [ -n "$(git -C "$MEM_DIR" status --porcelain 2>/dev/null)" ]; then
   git -C "$MEM_DIR" add -A 2>/dev/null || true
@@ -59,6 +69,13 @@ fi
 
 # Rebase onto remote, then push. On conflict: abort, keep working tree, alert.
 if git -C "$MEM_DIR" pull --rebase --autostash --quiet 2>/dev/null; then
+  # The rebase may have brought in new/changed memory files — regenerate so the
+  # pushed index reflects them, folding any change into a follow-up commit.
+  regen_index
+  if [ -n "$(git -C "$MEM_DIR" status --porcelain 2>/dev/null)" ]; then
+    git -C "$MEM_DIR" add -A 2>/dev/null || true
+    git -C "$MEM_DIR" commit -m "memory: regenerate index after rebase ($HOST)" --quiet 2>/dev/null || true
+  fi
   if git -C "$MEM_DIR" push --quiet 2>/dev/null; then
     log "memory pushed from $HOST"
   else

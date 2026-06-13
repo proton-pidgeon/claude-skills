@@ -37,6 +37,13 @@ if [ -d "$MEM_DIR/.git" ]; then
     git -C "$MEM_DIR" rebase --abort 2>/dev/null || true
     log "memory pull skipped (offline or needs manual merge): $MEM_DIR"
   fi
+  # MEMORY.md is derived from per-file frontmatter — rebuild it so the session
+  # starts with an index matching the freshly pulled files. The change stays
+  # uncommitted; the SessionEnd push hook commits it.
+  SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+  if command -v node >/dev/null 2>&1 && [ -f "$SCRIPT_DIR/kev-memory-index.mjs" ]; then
+    node "$SCRIPT_DIR/kev-memory-index.mjs" "$MEM_DIR" 2>&1 | while IFS= read -r l; do log "$l"; done
+  fi
 fi
 
 # NOTE: plugin/marketplace CODE is intentionally NOT auto-pulled here. Updating plugin

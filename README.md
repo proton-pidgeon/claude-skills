@@ -58,9 +58,8 @@ Prefer to do it by hand? `/plugin marketplace add proton-pidgeon/claude-skills` 
 
 | Type | Items |
 |---|---|
-| Skills | `/ingest` (design docs → specs/tasks), `/implement` (autonomously build a `tasks/` backlog via worktree-isolated parallel agents), `/security-test` (static source-level security audit → prioritized findings report), `/understand` (deep-review a repo → on-screen briefing + durable project memory), `/peggy` (onboard a local service into the Peggy gateway), `/commit` (commit + push, and PR-merge a feature branch, in one step) |
+| Skills | `/ingest` (design docs → specs/tasks), `/implement` (autonomously build a `tasks/` backlog via worktree-isolated parallel agents), `/understand` (deep-review a repo → on-screen briefing + durable project memory), `/security-test` (static source-level security audit → prioritized findings report), `/portfolio` (read-only status sweep across all `~/code-local` repos), `/peggy` (onboard a local service into the Peggy gateway), `/peggy-doctor` (diagnose a misbehaving Peggy service against the gotcha catalog), `/daemonize` (install + verify a durable user LaunchAgent pair), `/fork-hack` (stand up a hack-fork: origin=fork, upstream push-disabled, branch `hack`), `/ship-ios` (Xcode Cloud signing-repair runbook), `/fleet` (run a command across the Tailscale host fleet; default = plugin sync), `/commit` (commit + push, and PR-merge a feature branch, in one step) |
 | Commands | `/telegram` (notify via your bot), `/gui-teardown` (quit the VS Code GUI instance a Remote Control session is hosted in + release its caffeinate) |
-| Agents | `arch-infrastructure-reviewer`, `ux-design-reviewer` |
 | Hooks | fully-automatic memory sync (see below) |
 
 ## Memory sync (fully automatic)

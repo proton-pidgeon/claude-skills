@@ -58,7 +58,7 @@ Prefer to do it by hand? `/plugin marketplace add proton-pidgeon/claude-skills` 
 
 | Type | Items |
 |---|---|
-| Skills | `/ingest` (design docs → specs/tasks), `/implement` (autonomously build a `tasks/` backlog via worktree-isolated parallel agents), `/security-test` (static source-level security audit → prioritized findings report), `/understand` (deep-review a repo → on-screen briefing + durable project memory), `/peggy` (onboard a local service into the Peggy gateway) |
+| Skills | `/ingest` (design docs → specs/tasks), `/implement` (autonomously build a `tasks/` backlog via worktree-isolated parallel agents), `/security-test` (static source-level security audit → prioritized findings report), `/understand` (deep-review a repo → on-screen briefing + durable project memory), `/peggy` (onboard a local service into the Peggy gateway), `/commit` (commit + push, and PR-merge a feature branch, in one step) |
 | Commands | `/telegram` (notify via your bot), `/gui-teardown` (quit the VS Code GUI instance a Remote Control session is hosted in + release its caffeinate) |
 | Agents | `arch-infrastructure-reviewer`, `ux-design-reviewer` |
 | Hooks | fully-automatic memory sync (see below) |
@@ -97,7 +97,7 @@ permission-bypass flags and host-specific plugins — set those per machine.
 ├── .claude-plugin/marketplace.json     # marketplace manifest (name: kevdunn)
 ├── plugins/kev/                        # the plugin
 │   ├── .claude-plugin/plugin.json
-│   ├── skills/{ingest,implement,security-test,understand,peggy}/SKILL.md
+│   ├── skills/{ingest,implement,security-test,understand,peggy,commit}/SKILL.md
 │   ├── commands/{telegram,gui-teardown}.md
 │   ├── agents/{arch-infrastructure,ux-design}-reviewer.md
 │   ├── hooks/hooks.json                # SessionStart/SessionEnd sync

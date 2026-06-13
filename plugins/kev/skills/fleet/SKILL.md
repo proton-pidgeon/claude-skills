@@ -8,9 +8,9 @@ description: Run a command across a curated fleet of the user's Tailscale-connec
 Fan a single command out to every host in a curated allowlist, over Tailscale SSH, in
 parallel, and report one consolidated pass/fail summary. With **no command**, the default
 action **syncs the `kev@kevdunn` plugin** on each host — the exact friction that prompted
-this: after landing a plugin/skill change, every other machine still needs
+this: after landing a plugin/skill change, every machine still needs
 `claude plugin marketplace update kevdunn` before it sees the new version. `/fleet` does that
-everywhere at once.
+everywhere at once — including the local host (run directly, no ssh).
 
 It's backed by the script `kev-fleet.sh`, which does the host resolution, OS detection,
 parallel SSH, and reporting deterministically.
@@ -46,8 +46,11 @@ Pick the invocation from what the user asked:
   `bash <script> -- <command...>` — everything after `--` is the command. Unix hosts run it
   under a login shell (so `claude` and friends are on PATH); Windows hosts run it via their
   default Tailscale-SSH shell.
+- **The local host is included by default** — it runs the command directly (no ssh), so
+  `/fleet` updates this machine too. Add `--no-self` to act on the remote hosts only.
 - **Restrict to a subset:** add `--hosts a,b` (the names must already be in the allowlist).
-- **Preview without running:** `--dry-run` prints the exact ssh command per host.
+  A subset targets exactly the named hosts — the local node is not auto-added.
+- **Preview without running:** `--dry-run` prints the exact command per host.
 - **See the resolved targets:** `--list` shows each allowlisted host with its OS and state
   (ok / offline / self / unknown).
 - **First-run setup:** `--init` scaffolds `~/.claude/fleet-hosts` from the current tailnet
@@ -66,8 +69,8 @@ before the first real run.
 After running, summarize for the user:
 - Which hosts updated/ran successfully, and the key line of output (e.g. "Successfully
   updated marketplace: kevdunn", a `claude --version`, the command's result).
-- Which were skipped and why (self — run it locally with `/plugin marketplace update kevdunn`
-  if desired; offline — note last-seen).
+- Which were skipped and why (offline — note last-seen; self only if `--no-self` was passed).
+- The local host appears as `<name> (local)` and runs directly without ssh.
 - Which **failed**, with the cause and the fix: `Connection refused` → Tailscale SSH/sshd not
   enabled on that host; `Permission denied (publickey…)` → wrong remote user, add `user@` to
   its allowlist line. These are host config, not script faults.

@@ -47,13 +47,14 @@ ts() {
 }
 
 # ---- arg parse ------------------------------------------------------------
-mode="run"; dry=0; subset=""
+mode="run"; dry=0; subset=""; no_self=0
 cmd=()
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --list)    mode="list"; shift ;;
     --init)    mode="init"; shift ;;
     --dry-run) dry=1; shift ;;
+    --no-self) no_self=1; shift ;;
     --hosts)   subset="$2"; shift 2 ;;
     --)        shift; cmd=("$@"); break ;;
     -h|--help) sed -n '2,40p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
@@ -134,6 +135,21 @@ PY
 }
 
 mapfile -t rows < <(resolve)
+
+# Always include the local node (run directly, no ssh) unless --no-self or a
+# --hosts subset was given. If the allowlist already resolved a self row, keep
+# it; otherwise inject one so /fleet updates this machine too.
+if [[ "$no_self" != "1" && -z "$subset" ]]; then
+  has_self=0
+  if [[ ${#rows[@]} -gt 0 ]]; then
+    for r in "${rows[@]}"; do IFS=$'\t' read -r _t _o s <<<"$r"; [[ "${s:-}" == "self" ]] && has_self=1; done
+  fi
+  if [[ "$has_self" == "0" ]]; then
+    selfrow="$(printf '%s\tlocal\tself' "$(hostname -s)")"
+    if [[ ${#rows[@]} -gt 0 ]]; then rows=( "$selfrow" "${rows[@]}" ); else rows=( "$selfrow" ); fi
+  fi
+fi
+
 if [[ ${#rows[@]} -eq 0 ]]; then
   echo "No matching hosts in $FLEET_HOSTS${subset:+ (subset: $subset)}." >&2
   exit 1
@@ -173,6 +189,19 @@ tmp="$(mktemp -d)"; trap 'rm -rf "$tmp"' EXIT
 launched=()
 for r in "${rows[@]}"; do
   IFS=$'\t' read -r target os state <<<"$r"
+
+  # Local node: run the command directly, no ssh.
+  if [[ "$state" == "self" ]]; then
+    if [[ "$dry" == "1" ]]; then
+      printf 'DRY\t%s\t(local) %s\n' "$target" "$remote" > "$tmp/$target.res"; continue
+    fi
+    ( out="$(bash -lc "$remote" 2>&1)"; rc=$?
+      { printf 'done\t%s\t%s\t' "$target" "$rc"
+        printf '%s' "$out" | tr '\n' '\037'; printf '\n'; } > "$tmp/$target.res"
+    ) &
+    launched+=("$!"); continue
+  fi
+
   if [[ "$state" != "ok" ]]; then
     printf 'skip\t%s\t%s (%s)\n' "$target" "$state" "${os:-unknown os}" > "$tmp/$target.res"
     continue
@@ -197,16 +226,17 @@ ok=0; bad=0; skipped=0
 for r in "${rows[@]}"; do
   IFS=$'\t' read -r target _os _state <<<"$r"
   res="$tmp/$target.res"; [[ -f "$res" ]] || continue
+  label="$target"; [[ "${_state:-}" == "self" ]] && label="$target (local)"
   kind="$(cut -f1 "$res")"
   case "$kind" in
-    skip) printf '  ⚪ %-26s %s\n' "$target" "$(cut -f3 "$res")"; ((skipped++)) ;;
-    DRY)  printf '  · %-26s would run: %s\n' "$target" "$(cut -f3 "$res")" ;;
+    skip) printf '  ⚪ %-26s %s\n' "$label" "$(cut -f3 "$res")"; ((skipped++)) ;;
+    DRY)  printf '  · %-26s would run: %s\n' "$label" "$(cut -f3 "$res")" ;;
     done)
       rc="$(cut -f3 "$res")"
       body="$(cut -f4- "$res" | tr '\037' '\n')"
       tail3="$(printf '%s' "$body" | grep -v '^[[:space:]]*$' | tail -n 2 | sed 's/^/      /')"
-      if [[ "$rc" == "0" ]]; then printf '  ✅ %-26s ok\n' "$target"; ((ok++))
-      else printf '  ❌ %-26s exit %s\n' "$target" "$rc"; ((bad++)); fi
+      if [[ "$rc" == "0" ]]; then printf '  ✅ %-26s ok\n' "$label"; ((ok++))
+      else printf '  ❌ %-26s exit %s\n' "$label" "$rc"; ((bad++)); fi
       [[ -n "$tail3" ]] && printf '%s\n' "$tail3"
       ;;
   esac

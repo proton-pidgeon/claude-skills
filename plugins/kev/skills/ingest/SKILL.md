@@ -20,7 +20,7 @@ Find the source design docs in this priority order. **Stop at the first source t
    - a directory: use every `*.md` inside (non-recursive unless the user says otherwise)
    - a single `.md` file: use just that file
    - a `.zip` file: unzip to a temp directory, then use every `*.md` inside
-2. **Recently attached files** — scan the most recent user messages (this turn and the previous few) for paths under `/root/.claude/uploads/`, `/tmp/`, `/var/folders/.../`, or anything that looks like a fresh upload. If found, use those (unzipping zips first).
+2. **Recently attached files** — scan the most recent user messages (this turn and the previous few) for paths that look like a fresh upload. Common upload/temp roots by platform: `/root/.claude/uploads/`, `/tmp/`, `/var/folders/.../` (macOS/Linux/cloud); `%TEMP%` / `%LOCALAPPDATA%\Temp\` / `C:\Users\<you>\AppData\Local\Temp\` (Windows). If found, use those (unzipping zips first).
 3. **Repo defaults** — look in this order for a folder containing `NN-*.md` files (numeric prefix, e.g. `01-overview.md`):
    - `./docs/design/`
    - `./design/`

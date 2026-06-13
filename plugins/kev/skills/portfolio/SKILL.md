@@ -24,7 +24,8 @@ says?" This sweep answers both in one skimmable table plus a short flagged list.
 
 ## Step 1 — Discover the repos
 
-Enumerate git repos directly under the dev root (default `~/code-local`, honor `$DEV_ROOT`):
+Enumerate git repos directly under the dev root (default `~/code-local`, honor `$DEV_ROOT`
+— `$env:DEV_ROOT` on a native Windows host, where the root resolves under the user profile):
 list immediate subdirectories containing a `.git`. Keep it to one level deep unless the user
 asks to recurse. Note the count up front.
 

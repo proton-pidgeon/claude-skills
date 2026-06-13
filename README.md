@@ -29,7 +29,7 @@ and add any MCP tokens locally. Details below.
 | **Filesystem** | CLI + Desktop | share the same `~/.claude/` per host | plugin install + git-synced memory + session hooks |
 | **Cloud** | web + mobile | ephemeral sandbox; **ignores `~/.claude`** | repo-committed `SessionStart` hook clones resources ([`cloud/`](cloud/)) |
 
-Git is the only substrate that reaches both. So: skills/commands/agents/hooks ship as a
+Git is the only substrate that reaches both. So: skills/commands/hooks ship as a
 **plugin**; memory lives in a **git-synced vault** (`claude-memory`); cloud gets a
 committed bootstrap hook.
 
@@ -96,9 +96,8 @@ permission-bypass flags and host-specific plugins — set those per machine.
 ├── .claude-plugin/marketplace.json     # marketplace manifest (name: kevdunn)
 ├── plugins/kev/                        # the plugin
 │   ├── .claude-plugin/plugin.json
-│   ├── skills/{ingest,implement,security-test,understand,peggy,commit}/SKILL.md
+│   ├── skills/{ingest,implement,understand,security-test,portfolio,peggy,peggy-doctor,daemonize,fork-hack,ship-ios,fleet,commit}/SKILL.md
 │   ├── commands/{telegram,gui-teardown}.md
-│   ├── agents/{arch-infrastructure,ux-design}-reviewer.md
 │   ├── hooks/hooks.json                # SessionStart/SessionEnd sync
 │   ├── scripts/kev-sync-{pull,push}.{sh,ps1}   # bash + native-PowerShell sync
 │   └── scripts/kev-gui-teardown.sh     # backs /gui-teardown

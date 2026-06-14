@@ -155,9 +155,12 @@ function Resolve-Fleet {
       $rows += [pscustomobject]@{ Target = $target; OS = ''; State = 'unknown' }
     }
   }
-  return ,$rows
+  return $rows
 }
 
+# @() coerces to an array for 0/1/many rows. NB: do NOT also `return ,$rows` from
+# Resolve-Fleet — the comma-wrap plus this @() double-nests the rows into a single
+# System.Object[] element, which breaks --list and the run loop on multi-host fleets.
 $rows = @(Resolve-Fleet)
 
 # Always include the local node (run directly, no ssh) unless --no-self or a

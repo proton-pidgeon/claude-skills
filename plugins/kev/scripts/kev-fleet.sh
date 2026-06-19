@@ -200,7 +200,11 @@ for r in "${rows[@]}"; do
     if [[ "$dry" == "1" ]]; then
       printf 'DRY\t%s\t(local) %s\n' "$target" "$remote" > "$tmp/$target.res"; continue
     fi
-    ( out="$(bash -lc "$remote" 2>&1)"; rc=$?
+    # A login shell may not pick up the user's PATH additions (e.g. claude in
+    # ~/.local/bin is added by ~/.zshrc, which `bash -lc` never sources), so the
+    # local self-run can fail with "claude: command not found" even though the
+    # CLI is installed. Prepend the common install dirs before invoking.
+    ( out="$(PATH="$HOME/.local/bin:$HOME/.claude/local:/opt/homebrew/bin:/usr/local/bin:$PATH" bash -lc "$remote" 2>&1)"; rc=$?
       { printf 'done\t%s\t%s\t' "$target" "$rc"
         printf '%s' "$out" | tr '\n' '\037'; printf '\n'; } > "$tmp/$target.res"
     ) &

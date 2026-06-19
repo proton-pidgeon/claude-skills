@@ -137,7 +137,9 @@ PY
   rm -f "$tjson"
 }
 
-mapfile -t rows < <(resolve)
+# bash 3.2 (macOS system bash) has no `mapfile`; read rows portably instead.
+rows=()
+while IFS= read -r _line; do rows+=("$_line"); done < <(resolve)
 
 # Always include the local node (run directly, no ssh) unless --no-self or a
 # --hosts subset was given. If the allowlist already resolved a self row, keep

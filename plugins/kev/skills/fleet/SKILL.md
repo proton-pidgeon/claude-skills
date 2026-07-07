@@ -98,6 +98,37 @@ After running, summarize for the user:
 - **Custom commands with shell operators** (`&&`, `|`) run fine inside the unix login shell;
   on Windows they depend on that host's default shell (modern PowerShell / cmd handle `&&`).
 
+## Recipe — provisioning the Codex plugin across the fleet
+
+The `/implement` review gate depends on OpenAI's `codex-plugin-cc`, which is a thin bridge over
+the **local `codex` CLI** — the CLI is the real dependency and carries the authentication. This
+splits into a fleet-friendly layer and a per-host manual layer; don't pretend fleet does the part
+it can't.
+
+**Fleet-friendly (fan out):**
+1. `/fleet -- node --version` — Codex needs Node 18.18+; see which hosts qualify before installing.
+2. `/fleet -- npm install -g @openai/codex` — installs the Codex CLI on every qualifying host.
+3. `/fleet -- codex --version` — confirm the binary landed everywhere.
+
+**Per-host manual (fleet cannot do these):**
+- **CC plugin install** is three *slash* commands, which run inside a CC session, not over SSH:
+  `/plugin marketplace add openai/codex-plugin-cc` → `/plugin install codex@openai-codex` →
+  `/reload-plugins`. Do this once per host inside CC (or confirm a non-interactive `claude`-CLI
+  equivalent on one host first before assuming fleet can script it).
+- **Auth** is `codex login` — an interactive browser OAuth flow that `BatchMode` SSH cannot drive.
+  One manual step per host, exactly like Phylax's one-time `/login`. **The one exception that IS
+  fleet/secrets-friendly:** if using an API key, Codex reads `OPENAI_API_KEY` from the host
+  environment, so placing that key via the host's normal secrets mechanism satisfies auth with no
+  browser. **Never pass a key through the `/fleet --` command line** — it lands in shell history on
+  every host; set it in the environment/secrets store instead.
+- Confirm readiness per host with `/codex:setup` inside CC.
+
+**Operational caveat to state when provisioning:** Codex usage is metered against the shared
+ChatGPT/OpenAI quota (one pool across all hosts), and the `/implement` gate reviews every green
+branch — hence that gate is on-by-default-with-`--no-review`, not mandatory. This plugin is *not*
+part of the `kevdunn` marketplace, so `/fleet` (default plugin sync) does not carry it; it is
+provisioned by this recipe, separately.
+
 ## Principles
 
 - **Allowlist is the safety boundary.** Explicit, curated, never bypassed.

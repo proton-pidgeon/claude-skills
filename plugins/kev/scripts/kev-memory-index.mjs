@@ -21,6 +21,21 @@ import { readdirSync, readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { join, basename } from 'node:path';
 
 const SIZE_WARN_BYTES = 24000; // the harness truncates the index near 24.4KB
+const DESC_MAX = 175; // per-entry index-line cap; full description stays in the file
+
+// Cap an index-line description at a word boundary so one long field can't
+// bloat the whole index (the full text still lives in the memory file, which
+// is what surfaces on recall). Set metadata.archived on a file to drop it here.
+function capDescription(d) {
+  if (d.length <= DESC_MAX) return d;
+  const cut = d.slice(0, DESC_MAX);
+  const sp = cut.lastIndexOf(' ');
+  return (sp > DESC_MAX * 0.6 ? cut.slice(0, sp) : cut).replace(/[\s—–-]+$/, '') + '…';
+}
+
+function isArchived(v) {
+  return v != null && ['true', 'yes', '1'].includes(String(v).trim().toLowerCase());
+}
 
 const memDir = process.argv[2];
 if (!memDir || !existsSync(memDir)) {
@@ -80,6 +95,7 @@ for (const f of readdirSync(memDir)) {
     continue;
   }
   if (!fm) continue; // not a memory file (no frontmatter)
+  if (isArchived(fm.metadata.archived)) continue; // excluded from the index
   const slug = basename(f, '.md');
   entries.push({
     file: f,
@@ -135,9 +151,9 @@ for (const [section, secEntries] of sectionOrder) {
   out.push('');
   out.push(`## ${section}`);
   for (const e of secEntries.sort(cmp)) {
-    out.push(`- [${e.title}](${e.file}) — ${e.description}`);
+    out.push(`- [${e.title}](${e.file}) — ${capDescription(e.description)}`);
     for (const c of (e.children ?? []).sort(cmp)) {
-      out.push(`  - [${c.title}](${c.file}) — ${c.description}`);
+      out.push(`  - [${c.title}](${c.file}) — ${capDescription(c.description)}`);
     }
   }
 }

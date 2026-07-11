@@ -1,8 +1,8 @@
-# SessionEnd hook (kev plugin) — native PowerShell port of kev-sync-push.sh, for Windows
+# SessionEnd hook (kev plugin) -- native PowerShell port of kev-sync-push.sh, for Windows
 # hosts without Git-for-Windows bash on PATH. Commit + push memory-vault changes,
 # conflict-safe. Best-effort and non-blocking. On an unresolvable rebase conflict it
 # aborts the push, leaves the working tree untouched, and fires a Telegram alert (if
-# configured) so the conflict can be merged by hand — the safety valve for fully-automatic
+# configured) so the conflict can be merged by hand -- the safety valve for fully-automatic
 # multi-host sync.
 #
 # Memory directory is resolved from `autoMemoryDirectory` (see kev-sync-pull.ps1).
@@ -46,7 +46,7 @@ if (-not (Test-Path (Join-Path $memDir '.git'))) { exit 0 }
 $hostName = if ($env:COMPUTERNAME) { $env:COMPUTERNAME } else { 'unknown' }
 $stamp    = (Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
 
-# MEMORY.md is derived from per-file frontmatter — rebuild it before committing
+# MEMORY.md is derived from per-file frontmatter -- rebuild it before committing
 # so what lands upstream is canonical (direct index edits get reconciled away).
 function Update-MemoryIndex {
     $indexer = Join-Path $PSScriptRoot 'kev-memory-index.mjs'
@@ -68,7 +68,7 @@ if (-not (git -C $memDir log '@{upstream}..HEAD' --oneline 2>$null)) { exit 0 }
 # Rebase onto remote, then push. On conflict: abort, keep working tree, alert.
 git -C $memDir pull --rebase --autostash --quiet 2>$null
 if ($LASTEXITCODE -eq 0) {
-    # The rebase may have brought in new/changed memory files — regenerate so the
+    # The rebase may have brought in new/changed memory files -- regenerate so the
     # pushed index reflects them, folding any change into a follow-up commit.
     Update-MemoryIndex
     if (git -C $memDir status --porcelain 2>$null) {

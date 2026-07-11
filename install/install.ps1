@@ -60,14 +60,14 @@ function Add-PsHook($data, $event, $entry, $marker) {
     $hooks | Add-Member -NotePropertyName $event -NotePropertyValue (@($existing) + $entry) -Force
 }
 
-# ── 1. Marketplace + plugin ────────────────────────────────────────────────
-Write-Host "→ Adding marketplace + installing the kev plugin"
+# -- 1. Marketplace + plugin ------------------------------------------------
+Write-Host "-> Adding marketplace + installing the kev plugin"
 try { claude plugin marketplace add proton-pidgeon/claude-skills 2>$null } catch {}
 try { claude plugin marketplace update kevdunn 2>$null } catch {}
 try { claude plugin install kev@kevdunn 2>$null } catch { try { claude plugin update kev@kevdunn 2>$null } catch {} }
 
-# ── 2. Merge shared settings ───────────────────────────────────────────────
-Write-Host "→ Merging shared preferences into $Settings"
+# -- 2. Merge shared settings -----------------------------------------------
+Write-Host "-> Merging shared preferences into $Settings"
 if (-not (Test-Path $Settings)) { '{}' | Set-Content -Path $Settings -Encoding UTF8 }
 $stamp = Get-Date -Format 'yyyyMMddHHmmss'
 Copy-Item -Path $Settings -Destination "$Settings.bak.$stamp" -Force
@@ -77,7 +77,7 @@ $data   = Get-Content -Raw -Path $Settings | ConvertFrom-Json
 if (-not $data) { $data = [pscustomobject]@{} }
 Merge-Object $data $shared
 
-# ── 2b. Native PowerShell memory-sync hooks (Windows, no Git-bash needed) ───
+# -- 2b. Native PowerShell memory-sync hooks (Windows, no Git-bash needed) ---
 # The plugin ships bash sync hooks (hooks.json) for macOS/Linux/Git-bash. On a pure
 # Windows host those need bash on PATH; these .ps1 ports do not. We fetch them next to
 # settings and wire equivalent SessionStart/SessionEnd hooks into settings.json. The bash
@@ -113,16 +113,16 @@ if ($psExe) {
 ($data | ConvertTo-Json -Depth 32) + "`n" | Set-Content -Path $Settings -Encoding UTF8
 Write-Host "  Settings merged"
 
-# ── 3. Memory vault ────────────────────────────────────────────────────────
+# -- 3. Memory vault --------------------------------------------------------
 $memSetting = $data.PSObject.Properties['autoMemoryDirectory'].Value
 if (-not $memSetting) { $memSetting = '~/claude-memory' }
 $MemDir = $memSetting -replace '^~[/\\]', ($HOME.TrimEnd('\') + '\') -replace '/', '\'
 
 if (Test-Path (Join-Path $MemDir '.git')) {
-    Write-Host "→ Memory vault present at $MemDir — pulling latest"
+    Write-Host "-> Memory vault present at $MemDir -- pulling latest"
     git -C $MemDir pull --rebase --autostash --quiet 2>$null
 } else {
-    Write-Host "→ Cloning memory vault $MemoryRepo -> $MemDir"
+    Write-Host "-> Cloning memory vault $MemoryRepo -> $MemDir"
     try {
         git clone "https://github.com/$MemoryRepo.git" $MemDir 2>$null
     } catch {
@@ -130,13 +130,13 @@ if (Test-Path (Join-Path $MemDir '.git')) {
     }
 }
 
-# ── 4. Per-host secrets reminder ───────────────────────────────────────────
+# -- 4. Per-host secrets reminder -------------------------------------------
 Write-Host ""
-Write-Host "✓ Bootstrap complete. Restart Claude Code to load the plugin and hooks."
+Write-Host "[OK] Bootstrap complete. Restart Claude Code to load the plugin and hooks."
 Write-Host ""
-Write-Host "Per-host secrets are NEVER synced — set these on each machine:"
-Write-Host "  • Telegram alerts:   run the telegram-notify setup; creds live in ~\.claude\.telegram"
-Write-Host "  • MCP server tokens: add to ~\.claude.json or environment (never committed)"
+Write-Host "Per-host secrets are NEVER synced -- set these on each machine:"
+Write-Host "  - Telegram alerts:   run the telegram-notify setup; creds live in ~\.claude\.telegram"
+Write-Host "  - MCP server tokens: add to ~\.claude.json or environment (never committed)"
 Write-Host ""
 Write-Host "Memory lives in: $MemDir  (open it as an Obsidian vault for a GUI)."
 Write-Host "It syncs automatically on session start (pull) and session end (push)."

@@ -9,7 +9,7 @@
   "plugins": [
     {
       "name": "kev",
-      "description": "Personal skills (feature, ingest, implement, harden, security-test, understand, peggy, peggy-doctor, daemonize, fork-hack, portfolio, ship-ios, fleet, host, commit), commands (telegram, gui-teardown, harden), and cross-surface sync hooks.",
+      "description": "Personal skills (feature, project-design, ingest, implement, harden, security-test, understand, portfolio, peggy, peggy-doctor, daemonize, fork-hack, ship-ios, fleet, host, commit, deep-research, notebooklm-push, periplous), commands (telegram, gui-teardown, harden, notebooklm, periplous, project-design), and cross-surface sync hooks.",
       "author": {
         "name": "Kev Dunn"
       },

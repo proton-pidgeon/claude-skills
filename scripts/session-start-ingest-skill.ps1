@@ -29,7 +29,7 @@ function Write-Log {
     }
 }
 
-# ── 0. Bail fast if we're not in a git working tree ───────────────────────
+# -- 0. Bail fast if we're not in a git working tree -----------------------
 $repoRoot = $null
 try {
     $repoRoot = (& git rev-parse --show-toplevel 2>$null).Trim()
@@ -42,10 +42,10 @@ $skillUrl  = if ($env:INGEST_SKILL_URL) { $env:INGEST_SKILL_URL } else {
     'https://raw.githubusercontent.com/proton-pidgeon/claude-skills/main/ingest/SKILL.md'
 }
 
-# ── 1. Per-repo opt-out ───────────────────────────────────────────────────
+# -- 1. Per-repo opt-out ---------------------------------------------------
 if (Test-Path (Join-Path $repoRoot '.claude/no-ingest-skill')) { exit 0 }
 
-# ── 2. Fetch upstream into a temp file ────────────────────────────────────
+# -- 2. Fetch upstream into a temp file ------------------------------------
 $tmp = [System.IO.Path]::GetTempFileName()
 try {
     try {
@@ -63,14 +63,14 @@ try {
         exit 0
     }
 
-    # ── 3. Compare to local; no-op if identical ───────────────────────────
+    # -- 3. Compare to local; no-op if identical ---------------------------
     if (Test-Path $skillPath) {
         $upstreamHash = (Get-FileHash -Path $tmp -Algorithm SHA256).Hash
         $localHash    = (Get-FileHash -Path $skillPath -Algorithm SHA256).Hash
         if ($upstreamHash -eq $localHash) { exit 0 }
     }
 
-    # ── 4. Install / refresh ──────────────────────────────────────────────
+    # -- 4. Install / refresh ----------------------------------------------
     $dir = Split-Path $skillPath -Parent
     if (-not (Test-Path $dir)) { New-Item -ItemType Directory -Path $dir -Force | Out-Null }
     Move-Item -Path $tmp -Destination $skillPath -Force
@@ -79,7 +79,7 @@ try {
     if ($tmp -and (Test-Path $tmp)) { Remove-Item -Path $tmp -Force -ErrorAction SilentlyContinue }
 }
 
-# ── 5. Stage; auto-commit only if working tree is otherwise clean ─────────
+# -- 5. Stage; auto-commit only if working tree is otherwise clean ---------
 Push-Location $repoRoot
 try {
     & git add -- $relPath | Out-Null

@@ -1,0 +1,74 @@
+name: lint
+
+# Lightweight static checks for a hand-written skills/shell repo: catch the bug
+# classes that have actually bitten (broken shell, unparsable PowerShell, non-ASCII
+# .ps1 corrupting under PS 5.1's ANSI reader, malformed JSON manifests, bad .mjs).
+# Deliberately not a test suite -- there is nothing to run; these are parse/lint gates.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: shellcheck (*.sh, errors only)
+        run: |
+          sudo apt-get update -qq && sudo apt-get install -y -qq shellcheck
+          fail=0
+          while IFS= read -r f; do
+            if ! shellcheck -S error "$f"; then fail=1; fi
+          done < <(find . -name '*.sh' -not -path './.git/*')
+          exit $fail
+
+      - name: PowerShell parse (*.ps1)
+        shell: pwsh
+        run: |
+          $failed = $false
+          Get-ChildItem -Recurse -Filter *.ps1 | ForEach-Object {
+            $tokens = $null; $errs = $null
+            [System.Management.Automation.Language.Parser]::ParseFile($_.FullName, [ref]$tokens, [ref]$errs) | Out-Null
+            if ($errs -and $errs.Count -gt 0) {
+              $failed = $true
+              Write-Host "PARSE ERRORS: $($_.FullName)"
+              $errs | ForEach-Object { Write-Host "  $($_.Message)" }
+            } else {
+              Write-Host "ok $($_.FullName)"
+            }
+          }
+          if ($failed) { exit 1 }
+
+      - name: PowerShell must be ASCII-only (PS 5.1 reads .ps1 as ANSI)
+        run: |
+          fail=0
+          while IFS= read -r f; do
+            if LC_ALL=C grep -nP '[^\x00-\x7F]' "$f"; then
+              echo "NON-ASCII bytes in $f -- convert to ASCII (em-dash/arrows/box-drawing corrupt under PS 5.1)"
+              fail=1
+            fi
+          done < <(find . -name '*.ps1' -not -path './.git/*')
+          exit $fail
+
+      - name: JSON is well-formed (*.json)
+        run: |
+          fail=0
+          while IFS= read -r f; do
+            if ! jq empty "$f"; then echo "INVALID JSON: $f"; fail=1; fi
+          done < <(find . -name '*.json' -not -path './.git/*')
+          exit $fail
+
+      - name: Node syntax check (*.mjs)
+        run: |
+          fail=0
+          while IFS= read -r f; do
+            if ! node --check "$f"; then echo "SYNTAX ERROR: $f"; fail=1; fi
+          done < <(find . -name '*.mjs' -not -path './.git/*')
+          exit $fail

@@ -1,8 +1,8 @@
-# kev-fleet.ps1 — native-PowerShell port of kev-fleet.sh. Runs a command across a
+# kev-fleet.ps1 -- native-PowerShell port of kev-fleet.sh. Runs a command across a
 # curated fleet of Tailscale hosts, in parallel, with per-host OS detection and an
 # aggregated report. Backs the /fleet skill on a Windows host that has no bash.
 #
-# Default action (no command given): sync the kev@kevdunn plugin on every host —
+# Default action (no command given): sync the kev@kevdunn plugin on every host --
 #   claude plugin marketplace update kevdunn
 # so a plugin/skill change made on one host reaches all the others.
 #
@@ -13,7 +13,7 @@
 #
 # Parity notes vs the .sh:
 #  - Uses ConvertFrom-Json instead of python3 (no python dependency on Windows).
-#  - ASCII status markers ([OK]/[XX]/[--]) instead of emoji — Windows consoles.
+#  - ASCII status markers ([OK]/[XX]/[--]) instead of emoji -- Windows consoles.
 #  - Parallelism via Start-Job (works on Windows PowerShell 5.1 and PS7+).
 #  - Unix hosts run under `bash -lc`; Windows hosts run via their default SSH shell;
 #    the local node runs directly (cmd /c) with no ssh.
@@ -159,7 +159,7 @@ function Resolve-Fleet {
 }
 
 # @() coerces to an array for 0/1/many rows. NB: do NOT also `return ,$rows` from
-# Resolve-Fleet — the comma-wrap plus this @() double-nests the rows into a single
+# Resolve-Fleet -- the comma-wrap plus this @() double-nests the rows into a single
 # System.Object[] element, which breaks --list and the run loop on multi-host fleets.
 $rows = @(Resolve-Fleet)
 

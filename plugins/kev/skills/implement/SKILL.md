@@ -27,14 +27,16 @@ This skill is the executing half of the `/ingest → /implement` pipeline. `/ing
 4. **Confirm a clean, green baseline.**
    - The working tree must be clean (no uncommitted changes) and on a sensible base branch. If dirty, stop and ask the user to commit/stash.
    - Detect the project's test/build command (read `package.json` scripts, `Makefile`, `pyproject.toml`, `justfile`, CI config, or a project skill). If you cannot determine how to verify, **ask** — you cannot gate on green without it.
-   - **Run it once on the base.** If the baseline is already red, **abort**: gating on green is meaningless from a red start. Report which tests fail and stop.
+   - **Run it once on the base.** If the baseline is already red, the default is to **abort**: gating on green is meaningless from a red start. Report which tests fail and stop. **But brownfield repos are often red on `main` for reasons orthogonal to the backlog** (a coverage-gate threshold, pre-existing lint/type drift, an ordering-flaky singleton test). In that case, offer the user one of two paths rather than a dead stop: (a) **fix the red baseline first as its own task** — attribute each failure via `git log -S`/`git show`, repair the *test* to encode the deliberate product change (never relax an assertion to vacuity); or (b) switch to **differential gating** — run tests green with the coverage gate off (e.g. `pytest --no-cov`), and require *zero new* lint/type findings versus a per-branch baseline you capture up front, rather than an absolute-zero bar. Pick this only with the user's nod; note it in the plan so the weaker gate is on the record.
    - Record the base branch name and its HEAD commit — this is the merge target, the review base (`--base`), and the rollback anchor.
 5. **Confirm the review gate is usable** (unless `--no-review`). The gate uses the Codex plugin (`openai/codex-plugin-cc`). Check that `/codex:*` commands are available and Codex is authenticated — a quick `/codex:setup` reports readiness. **If Codex is not installed/authed:** tell the user, and ask whether to proceed with `--no-review` (green-gate only) or stop to fix Codex. Never silently skip the review the user asked for.
 6. **Plan the waves.** Topologically sort the DAG into waves (a wave = all tasks whose dependencies are already merged). Print the plan: the wave order, which tasks run in parallel, the verify command, and whether the review gate is on. Then proceed (no approval gate — but the plan is on screen so an interrupt is possible).
 
 ## Phase 1 — Fan out per wave (worktree-isolated sub-agents)
 
-Process waves in order. Within a wave, fan out **concurrently** — one sub-agent per task, each with `isolation: worktree` (or an explicit `git worktree add ../<repo>-impl-NN impl/NN-slug` off the recorded base commit). Cap concurrency at roughly CPU-cores − 2; excess tasks queue.
+Process waves in order. Within a wave, fan out **concurrently** — one sub-agent per task, each with `isolation: worktree` (or an explicit `git worktree add ../<repo>-impl-NN impl/NN-slug`). Cap concurrency at roughly CPU-cores − 2; excess tasks queue.
+
+**Branch each wave off the *current* base HEAD, not the frozen Phase-0 baseline.** A wave's worktrees must include everything prior waves already merged, or a task won't see its own merged dependencies. So the base for wave *k* is base-branch HEAD *after* waves 1…*k*−1 merged — not the commit you recorded in Phase 0. Have each sub-agent make `git checkout -B impl/NN <current-base-HEAD>` its **first** step rather than trusting the worktree snapshot, which the harness can cut stale (pre-merge). Also **copy any git-ignored `.env`/secrets into each worktree right after creating it** — `git worktree add` only carries committed files, so a task whose `Definition of done` needs live keys otherwise runs against an empty env and fails silently. For heavy shared deps (torch/whisper/etc.), build one `<repo>/.venv` once and point every worktree agent's commands at its absolute path instead of installing per-worktree.
 
 Each task's sub-agent is given **only** its `tasks/NN-*.md` and the files its `Relevant specs:` point to, and told to:
 
@@ -122,6 +124,22 @@ Merging after each branch (rather than all at once) is deliberate: it attributes
 - **Verify with commands, not vibes.** "Done" means the `Definition of done` command exited zero — both per-worktree and on the integrated base. The review adjudication is the one judgment call, and it errs toward blocking on concrete defects.
 - **Leave failures recoverable.** Quarantined work stays on a pushed branch with a `> blocked:` note (including the verbatim Codex critique) in the task file, so a human (or a later `/implement`) can pick it up exactly where it stalled.
 - **The reviewer is adversarial by design.** Use `/codex:adversarial-review`, not `/codex:review` — the point is to challenge the approach, assumptions, and failure modes, not just lint the code. A second model with no stake in the implementation is the value.
+
+## Field-tested gotchas (from real runs)
+
+Hard-won lessons from live `/implement` runs (greenfield Plottle; brownfield ellisX; a concurrent two-orchestrator collision). Fold these into how the orchestrator and its sub-agents operate:
+
+**Orchestrator hygiene**
+- **Prefix every orchestrator git/test command with `cd <main-checkout> &&`.** The harness repoints the orchestrator's shell cwd into a notifying sub-agent's worktree between calls; an unqualified `git merge`/test then runs in the *wrong* tree and silently no-ops ("Already up to date" from inside a feature worktree, no merge actually done).
+- **Never park uncommitted work in the main checkout while a run is live** (and never run two `/implement` orchestrators in the same repo). The integration path uses `git reset --hard` / `git merge --abort`; a sibling's reset will wipe your in-progress conflicted merge or your not-yet-committed baseline fixes. Commit anything in the main checkout **immediately**; do all conflict resolution on the *branch* in an isolated resolver worktree, then perform one atomic merge.
+- **Guard every merge against a foreign in-flight merge:** before `git merge`, assert `[ ! -f .git/MERGE_HEAD ]` and no unmerged paths in `git status --porcelain`; wait-loop otherwise, and never `--abort` a conflict whose files don't belong to your branch (that cancels the other stream's merge).
+
+**Integration gate**
+- **Add a boot check to the integrated gate, alongside the suite.** A circular import (or other import-time break) can pass the whole pytest suite by import-order luck yet crash `uvicorn`/the entrypoint at startup. Run `python -c "import <app_module>"` (or the project's real boot command) after each merge, not just the tests.
+
+**Environment / tooling**
+- **`uv sync` alone omits the dev toolchain** — sub-agents that need pytest/ruff/mypy must `uv sync --extra dev` (plus any project extras), or the `Definition of done` command isn't even installed.
+- **Exit plan mode before starting.** Sub-agents spawned while the parent session's plan-mode flag is set are harness-blocked from editing — even with `mode: acceptEdits` — so every worktree agent fails to write. Confirm plan mode is off in Phase 0.
 
 ## Distribution / maintenance (for the skill author)
 

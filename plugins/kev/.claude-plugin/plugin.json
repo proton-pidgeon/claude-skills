@@ -1,8 +1,8 @@
 {
   "$schema": "https://anthropic.com/claude-code/plugin.schema.json",
   "name": "kev",
-  "description": "Personal skills (feature, project-design, ingest, implement, harden, security-test, understand, portfolio, peggy, peggy-doctor, daemonize, fork-hack, ship-ios, fleet, host, commit, deep-research, notebooklm-push), commands (telegram, gui-teardown, harden, notebooklm, project-design), and cross-surface sync hooks.",
-  "version": "0.23.0",
+  "description": "Personal skills (feature, project-design, ingest, implement, harden, security-test, understand, portfolio, peggy, peggy-doctor, daemonize, fork-hack, ship-ios, ship-ios-setup, fleet, host, commit, deep-research, notebooklm-push), commands (telegram, gui-teardown, harden, notebooklm, project-design), and cross-surface sync hooks.",
+  "version": "0.24.0",
   "author": {
     "name": "Kev Dunn",
     "email": "kevdunn@gmail.com"

@@ -1,9 +1,9 @@
 ---
-name: ship-ios
-description: Repair Xcode Cloud code-signing after adding a capability, app extension, or App Group to an existing app — the failure where the archive builds but exportArchive dies with "Automatic signing cannot update bundle identifier" / "No profiles found", because enabling a capability invalidated every managed profile. Walks the known recipe (register the appex bundle id + capability via the App Store Connect API, do the portal-only App Group assignment to BOTH App IDs, create manual IOS_APP_STORE profiles, verify the entitlement actually landed in profileContent, re-run the build via the API). Use when the user runs `/ship-ios`, or asks "my Xcode Cloud build won't sign", "exportArchive fails after I added an extension/App Group", or "fix the provisioning profiles for this app". macOS; needs App Store Connect API credentials + portal access.
+name: ship-ios-repair
+description: Repair Xcode Cloud code-signing after adding a capability, app extension, or App Group to an existing app — the failure where the archive builds but exportArchive dies with "Automatic signing cannot update bundle identifier" / "No profiles found", because enabling a capability invalidated every managed profile. Walks the known recipe (register the appex bundle id + capability via the App Store Connect API, do the portal-only App Group assignment to BOTH App IDs, create manual IOS_APP_STORE profiles, verify the entitlement actually landed in profileContent, re-run the build via the API). Use when the user runs `/ship-ios-repair`, or asks "my Xcode Cloud build won't sign", "exportArchive fails after I added an extension/App Group", or "fix the provisioning profiles for this app". macOS; needs App Store Connect API credentials + portal access.
 ---
 
-# /ship-ios — repair Xcode Cloud signing after a capability/extension change
+# /ship-ios-repair — repair Xcode Cloud signing after a capability/extension change
 
 Adding an app extension + App Group (or any capability) to an existing Xcode-Cloud-built app
 breaks signing in a specific, repairable way. This skill drives the recipe that worked on

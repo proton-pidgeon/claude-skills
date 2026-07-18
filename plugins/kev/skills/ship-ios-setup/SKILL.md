@@ -1,6 +1,6 @@
 ---
 name: ship-ios-setup
-description: Take a scaffolded iOS app (XcodeGen `project.yml` + an app extension/widget + App Group) from "code compiles" to "a git push auto-ships to TestFlight" — the FIRST-time setup, not a repair. Does the one-time App Store Connect provisioning (register app + appex bundle ids + App Groups capability via the ASC API, hand off the portal-only App Group assignment to BOTH App IDs + the app-record creation, mint/verify profiles), bakes the App-Store validation requirements into `project.yml` (app icon + CFBundleIconName, orientations + device family, export-compliance), and stands up Xcode Cloud (ci_post_clone that runs xcodegen, automatic signing, the one-time repo-connect) so pushes auto-build to TestFlight. Ships an optional local `ship.sh` fallback with the keychain gotchas baked in. Use when the user runs `/ship-ios-setup`, or asks to "set up TestFlight for this app", "make builds automatic", "I don't want to run a command for every build", "ship this iOS app", or "get this app onto TestFlight" for an app that has NEVER shipped. macOS; needs App Store Connect API credentials + one-time portal/Xcode access. For an app that already shipped and broke signing after a capability change, use `/ship-ios` (the repair) instead.
+description: Take a scaffolded iOS app (XcodeGen `project.yml` + an app extension/widget + App Group) from "code compiles" to "a git push auto-ships to TestFlight" — the FIRST-time setup, not a repair. Does the one-time App Store Connect provisioning (register app + appex bundle ids + App Groups capability via the ASC API, hand off the portal-only App Group assignment to BOTH App IDs + the app-record creation, mint/verify profiles), bakes the App-Store validation requirements into `project.yml` (app icon + CFBundleIconName, orientations + device family, export-compliance), and stands up Xcode Cloud (ci_post_clone that runs xcodegen, automatic signing, the one-time repo-connect) so pushes auto-build to TestFlight. Ships an optional local `ship.sh` fallback with the keychain gotchas baked in. Use when the user runs `/ship-ios-setup`, or asks to "set up TestFlight for this app", "make builds automatic", "I don't want to run a command for every build", "ship this iOS app", or "get this app onto TestFlight" for an app that has NEVER shipped. macOS; needs App Store Connect API credentials + one-time portal/Xcode access. For an app that already shipped and broke signing after a capability change, use `/ship-ios-repair` (the repair) instead.
 ---
 
 # /ship-ios-setup — first TestFlight + hands-off auto-delivery for an iOS app
@@ -8,7 +8,7 @@ description: Take a scaffolded iOS app (XcodeGen `project.yml` + an app extensio
 Every new iOS app you ship hits the same wall: an XcodeGen `project.yml`, an app extension +
 App Group, first-time provisioning, a handful of App-Store validation gates, and wiring up
 CI so builds happen on a push instead of a terminal command. This skill does that end to end.
-It is the **setup** counterpart to [[ship-ios]] (which **repairs** signing after a capability
+It is the **setup** counterpart to [[ship-ios-repair]] (which **repairs** signing after a capability
 change on an already-shipped app). It encodes what `[[project-verba]]`'s first ship
 (2026-07-18) paid for live — see also `[[asc-appex-signing-gotcha]]`.
 
@@ -19,7 +19,7 @@ themselves**.
 
 - **First-ship (this skill):** the app has no App Store Connect record, has never been
   archived/uploaded, no Xcode Cloud workflow. You're standing everything up.
-- **Repair (→ `/ship-ios`):** the app already ships, but after adding a capability/appex the
+- **Repair (→ `/ship-ios-repair`):** the app already ships, but after adding a capability/appex the
   archive builds and `exportArchive` dies with "cannot update bundle identifier / no profiles."
   That's a different, narrower recipe — don't run this one.
 
@@ -123,7 +123,7 @@ These are the gates a first upload trips one at a time — set them all up front
    scheme from the local (generated) project to configure it, so run `xcodegen generate` first.
 4. From then on, **`git push` to `main` = a TestFlight build** — no local machine involved.
    (Once a workflow exists, a build can also be kicked via `POST /v1/ciBuildRuns` — that's what
-   `/ship-ios` uses for re-runs.)
+   `/ship-ios-repair` uses for re-runs.)
 
 ## Phase 4 — Optional local fallback (`ship.sh`) + the keychain gotchas
 
@@ -161,7 +161,7 @@ failed, quote the exact `detail:` and fix that gate (they surface one at a time)
 
 ## Principles
 
-- **First-ship vs repair.** This stands things up; `[[ship-ios]]` fixes a broken managed-signing
+- **First-ship vs repair.** This stands things up; `[[ship-ios-repair]]` fixes a broken managed-signing
   re-run. Don't run the repair recipe on an app with no workflow/app-record.
 - **The App-Group-on-both-App-IDs is the silent-failure point.** The API can't do it and a
   profile minted before the assignment silently lacks the group — grep `profileContent`.
@@ -178,7 +178,7 @@ failed, quote the exact `detail:` and fix that gate (they surface one at a time)
 Ships in the `kev` plugin of `proton-pidgeon/claude-skills` (marketplace `kevdunn`); reaches
 other hosts on `/plugin marketplace update kevdunn` (+ restart) and the fleet auto-updater.
 **Bump `plugins/kev/.claude-plugin/plugin.json` `version` on any content change** or `plugin
-update` no-ops (`[[claude-skills-version-bump-gotcha]]`). Sibling of `[[ship-ios]]` (repair) —
+update` no-ops (`[[claude-skills-version-bump-gotcha]]`). Sibling of `[[ship-ios-repair]]` (repair) —
 if the ASC provisioning steps change, update both. Authored 2026-07-18 from `[[project-verba]]`'s
 first ship; its exemplar `project.yml`, `ship.sh`, `ci_scripts/ci_post_clone.sh`, and app-icon
 generator live in `~/code-local/verba/ios/`. See `[[claude-sync-architecture]]`.

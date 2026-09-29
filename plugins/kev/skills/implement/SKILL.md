@@ -31,14 +31,23 @@ This skill is the executing half of the `/ingest → /implement` pipeline. `/ing
 
 | Stage | Model | Why |
 |---|---|---|
-| P0 Preflight (orchestrator) | Opus 4.8 (session) | holds the DAG; runs once |
-| P1 Implementation (worktree agents) | **`sonnet`** default (**`opus`** for high-risk tasks) | the bulk of the spend; Sonnet 5 codes at near-Opus quality and is backstopped by the green + review gates |
+| P0 Preflight (orchestrator) | Opus (session model) | holds the DAG; runs once. The `opus` alias tracks latest (Opus 5.5 as of 2026-09-29) |
+| P1 Implementation (worktree agents) | **`sonnet`** default (**`opus`** for high-risk tasks) | the bulk of the spend; Sonnet codes at near-Opus quality and is backstopped by the green + review gates. Aliases track latest automatically (Sonnet 5.5 as of 2026-09-29) |
 | P1.5 Reviewer | **GPT-5** (Codex) | cross-lineage defect finding |
-| P1.5 Adjudicator | **`fable`** (dedicated agent) | the one judgment with no backstop below it; an open-ended severity call is Fable's strength, not its weakness; low-volume so the premium is bounded |
+| P1.5 Adjudicator | **`opus` screen → `fable` confirmer** | two-tier: Opus filters the clear passes (the volume), Fable has the final word on anything merge-blocking. Cross-lineage is preserved — a different family still judges the GPT-5 review |
 | P2 Resolver | **`opus`** → **`fable`** if gnarly → `codex-rescue` if stuck | touches the sacred base branch |
 | P4 Report / cleanup | **`haiku`** | pure formatting |
 
-Reviewer (GPT-5) + Adjudicator (Fable) is a deliberate **cross-lineage gate**: one family finds and argues the defects, a *different* family independently judges whether they block — not one model marking its own homework.
+Reviewer (GPT-5) + Adjudicator (Opus screen, Fable confirms blocks) is a deliberate **cross-lineage gate**: one family finds and argues the defects, a *different* family independently judges whether they block — not one model marking its own homework. Fable still decides every block; Opus only clears the passes.
+
+**Pinned full model names** — the aliases above track latest automatically; these are the
+only places a full name is pinned. Re-verify when a new generation lands (last verified 2026-09-29):
+- Fable→Opus refusal fallback: `claude-opus-5-5` (was `claude-opus-4-8`)
+- The `fable` alias currently resolves to `claude-fable-5-1`
+- The Codex reviewer/rescuer model is **not** pinned by this skill — it follows the Codex CLI
+  default (currently `gpt-5.6-terra` at `medium` effort per `~/.codex/config.toml` on this host).
+  Review invocations pass `--effort medium` explicitly so the latency/quality trade is
+  host-independent even where the CLI config differs.
 
 The **escalation ladder** (below) is the spine that ties both axes together: a task that fails a gate climbs `sonnet → opus → fable → GPT-5` before it's ever quarantined, so the expensive/slow tiers only ever touch the handful of tasks that earn them.
 
@@ -53,7 +62,7 @@ The **escalation ladder** (below) is the spine that ties both axes together: a t
    - **Run it once on the base.** If the baseline is already red, the default is to **abort**: gating on green is meaningless from a red start. Report which tests fail and stop. **But brownfield repos are often red on `main` for reasons orthogonal to the backlog** (a coverage-gate threshold, pre-existing lint/type drift, an ordering-flaky singleton test). In that case, offer the user one of two paths rather than a dead stop: (a) **fix the red baseline first as its own task** — attribute each failure via `git log -S`/`git show`, repair the *test* to encode the deliberate product change (never relax an assertion to vacuity); or (b) switch to **differential gating** — run tests green with the coverage gate off (e.g. `pytest --no-cov`), and require *zero new* lint/type findings versus a per-branch baseline you capture up front, rather than an absolute-zero bar. Pick this only with the user's nod; note it in the plan so the weaker gate is on the record.
    - Record the base branch name and its HEAD commit — this is the merge target, the review base (`--base`), and the rollback anchor.
 5. **Confirm the review gate is usable** (unless `--no-review`). The gate uses the Codex plugin (`openai/codex-plugin-cc`) for the GPT-5 reviewer. Check that `/codex:*` commands are available and Codex is authenticated — a quick `/codex:setup` reports readiness. **If Codex is not installed/authed:** tell the user, and ask whether to proceed with `--no-review` (green-gate only) or stop to fix Codex. Never silently skip the review the user asked for.
-6. **Confirm the Fable rungs are usable.** The Fable adjudicator (Phase 1.5) and the Fable escalation rung require `claude-fable-5`, which is **not available under zero data retention** — needs a 30-day-retention org. If the org can't reach Fable, degrade gracefully: adjudicate on `opus` instead and cap the escalation ladder at Opus (note the degrade in the plan). Don't hard-fail the run over it.
+6. **Confirm the Fable rungs are usable.** The Fable adjudicator (Phase 1.5) and the Fable escalation rung require `claude-fable-5-1`, which is **not available under zero data retention** — needs a 30-day-retention org. If the org can't reach Fable, degrade gracefully: the Opus adjudication screen's verdict stands alone and the escalation ladder caps at Opus (note the degrade in the plan). Re-verify the retention posture when the Fable generation changes. Don't hard-fail the run over it.
 7. **Plan the waves.** Topologically sort the DAG into waves (a wave = all tasks whose dependencies are already merged). Print the plan: the wave order, which tasks run in parallel, the verify command, the per-task **starting rung** (see Escalation ladder), and whether the review gate is on. Then proceed (no approval gate — but the plan is on screen so an interrupt is possible).
 
 ## Phase 1 — Fan out per wave (worktree-isolated sub-agents)
@@ -83,9 +92,9 @@ A sub-agent that cannot reach green returns `status: failed` with the failing ch
 
 **Step A — Review (GPT-5). Run reviews concurrently across the wave:**
 
-1. For each green task, from its worktree (or with the branch checked out), kick off in the background:
+1. For each green task, from its worktree (or with the branch checked out), kick off in the background **as soon as that task returns green — do not wait for the wave's fan-out to finish** (this hides review latency behind still-running implementations):
    ```
-   /codex:adversarial-review --base <recorded-base-commit> --background \
+   /codex:adversarial-review --base <recorded-base-commit> --background --effort medium \
      focus on: faithfulness to the task's Relevant specs, security, data loss,
      race conditions, error handling, and whether a simpler/safer approach was available
    ```
@@ -93,16 +102,17 @@ A sub-agent that cannot reach green returns `status: failed` with the failing ch
 2. Poll with `/codex:status`; as each finishes, pull its findings with `/codex:result`.
    - **`--panel`:** also spawn an **Opus co-reviewer** agent (`model: opus`) per branch against the same base, prompted adversarially with the same focus. The adjudicator then judges the **union** of the GPT-5 and Opus findings. Off by default (roughly doubles review cost); reserve it for high-risk backlogs.
 
-**Step B — Adjudicate (Fable). One dedicated agent per reviewed branch:**
+**Step B — Adjudicate (two-tier: Opus screens, Fable confirms blocks). One dedicated agent per reviewed branch:**
 
-3. For each branch, spawn a **Fable adjudicator** (`model: fable`) — run in the background across the wave, like the reviews. Hand it **only**: the review prose (GPT-5, plus the Opus co-reviewer's under `--panel`), the branch diff vs the recorded base, and the task's `Relevant specs:`. Its job is the open-ended judgment the reviewer can't make about its own output — classifying each finding and returning a **structured verdict**:
+3. For each branch, spawn an **adjudicator** at `model: opus` — run in the background across the wave, like the reviews. Prompt it to **err toward blocking** on any concrete defect. Hand it **only**: the review prose (GPT-5, plus the Opus co-reviewer's under `--panel`), the branch diff vs the recorded base, and the task's `Relevant specs:`. Its job is the open-ended judgment the reviewer can't make about its own output — classifying each finding and returning a **structured verdict**:
    ```
    { blocks: true|false, findings: [ { severity: HIGH|ADVISORY, summary, rationale } ] }
    ```
+   If the screen returns `blocks: true` (or `uncertain`), escalate that branch to a **Fable confirmer** (`model: fable`) with the same inputs plus the screen's rationale. **Fable's verdict is final** — it remains the last word on anything merge-blocking, exactly as before; Opus only filters the clear passes, which is where the volume (and the cost) is.
    Severity criteria for the adjudicator:
    - **HIGH (blocks merge):** a real correctness/security/data-loss/concurrency defect; a violation of a `Relevant specs:` contract or a project standing constraint; a broken invariant the tests didn't catch. When in doubt, treat a concrete exploitable/reproducible defect as high and a matter of taste as not.
    - **ADVISORY (does not block):** style, naming, non-critical perf, speculative concerns, "could also" suggestions, anything the specs don't require.
-   - Enable the **Fable→Opus refusal fallback** on this agent (server-side `fallbacks: [{model: "claude-opus-4-8"}]`) so a safety-classifier refusal on security-adjacent diffs doesn't stall the gate. If the org can't reach Fable at all (Phase 0 degrade), adjudicate on `model: opus` instead.
+   - Enable the **Fable→Opus refusal fallback** on the Fable confirmer (server-side `fallbacks: [{model: "claude-opus-5-5"}]`) so a safety-classifier refusal on security-adjacent diffs doesn't stall the gate. If the org can't reach Fable at all (Phase 0 degrade), adjudicate on `model: opus` instead.
 4. **Verdict per task** (from the adjudicator's structured output):
    - `blocks: false` → the branch passes the gate; carry any ADVISORY notes into the final report and proceed to Phase 2 for that branch.
    - `blocks: true` → the task **fails the review gate**: it is not merged. Route it to the **escalation ladder** (below); it lands in Phase 3 quarantine only if the top rung still can't satisfy the gate, with the HIGH findings recorded verbatim in the task file.
@@ -111,29 +121,30 @@ Cost/latency is real: run both the reviews and the adjudications in the backgrou
 
 ## Phase 2 — Integrate (orchestrator, topological order)
 
-Merge **one branch at a time**, in dependency order, on the base branch in the main working tree. Only branches that passed **both** the green gate (Phase 1) and the review gate (Phase 1.5) are eligible.
+Merge **the whole wave's eligible branches**, in dependency order, on the base branch in the main working tree — then run the full suite **once per wave**. Only branches that passed **both** the green gate (Phase 1) and the review gate (Phase 1.5) are eligible. Batching trades per-merge attribution for (N−1) fewer full-suite runs per wave; attribution is recovered by bisecting on red (below). The integrated-green gate itself is unchanged — nothing reaches the base without it.
 
-1. `git merge --no-ff impl/NN-slug` into base.
+1. For each eligible branch in dependency order: `git merge --no-ff impl/NN-slug` into base.
 2. **On a merge conflict** → spawn a **resolver sub-agent** at `model: opus` (the base branch is sacred — resolution is high-stakes): give it the conflicted files, both task specs, and the instruction to reconcile faithfully to the specs (not to delete either side's intent). It resolves, commits the merge. If Opus can't reconcile it cleanly, escalate the resolver to `model: fable`; if a truly stuck conflict resists even that, hand it to `codex-rescue` (GPT-5, a different lineage) for one independent pass **before** rolling back.
-3. **Run the full suite on the merged base.** Integrated green is the real gate — per-worktree green can still break on integration.
-   - Green → the merge stands; move to the next branch.
-   - Red → spawn the `opus` resolver sub-agent to fix the integration (against the relevant specs) and re-run the suite. If it greens, the merge stands. Same escalation as above (Opus → Fable → `codex-rescue`) if it can't.
-   - Still red after the ladder → **roll back this one merge** (`git reset --hard` to the pre-merge commit) and treat the task as failed (→ Phase 3 quarantine).
+3. **Run the full suite once on the merged base.** Integrated green is the real gate — per-worktree green can still break on integration.
+   - Green → the wave's merges stand; move to the next wave.
+   - Red → **bisect to attribute**: binary-search the wave's merges (re-test at midpoints) to find the breaking branch, then spawn the `opus` resolver sub-agent to fix the integration (against the relevant specs) and re-run the suite. If it greens, the merges stand. Same escalation as above (Opus → Fable → `codex-rescue`) if it can't.
+   - Still red after the ladder → **roll back the breaking merge only** (`git reset --hard` to the pre-merge commit, then re-apply the innocent merges) and treat that task as failed (→ Phase 3 quarantine).
 
-Merging after each branch (rather than all at once) is deliberate: it attributes any breakage to the specific feature that caused it. (Note: the adversarial review already ran per-branch pre-merge; integration here is about mechanical conflicts and integrated-suite green, not re-review.)
+(Note: the adversarial review already ran per-branch pre-merge; integration here is about mechanical conflicts and integrated-suite green, not re-review.)
 
 ## Escalation ladder (the spine — sits between failure and quarantine)
 
 A task that fails a gate does **not** quarantine on first failure. It climbs a ladder, and only quarantines if the **top rung** still can't satisfy the gate. The first three rungs add *capability* (same lineage, bigger model); the last adds *diversity* (a different lineage breaks ruts that capability alone won't):
 
 ```
-sonnet 5  →  opus 4.8  →  fable 5  →  GPT-5 (codex-rescue)  →  quarantine
+sonnet  →  opus  →  fable  →  GPT-5.x (codex-rescue)  →  quarantine
 └──── Axis 1: capability rungs ────┘   └─ Axis 2: diversity rung ─┘
+(latest generation: Sonnet 5.5 → Opus 5.5 → Fable 5.1 → Codex CLI default; verified 2026-09-29)
 ```
 
 - **Trigger:** a task fails its **green gate** (Phase 1 — can't reach green) **or** its **review gate** (Phase 1.5 — adjudicator returns `blocks: true`). Either sends it up the ladder.
 - **Starting rung:** the rung the orchestrator assigned in Phase 1 (default `sonnet`, or `opus` for high-risk tasks). A task never *descends* — it resumes from the next rung above where it failed.
-- **Each climb** re-runs the task on a fresh worktree at the higher `model`, then re-runs **both** gates (green, then review). Give the higher-tier agent the prior rung's failing checks / HIGH findings as context so it fixes the specific gap, not the whole task from scratch.
+- **Each climb** reuses the failed worktree (**surgical retry**): the higher-tier agent gets the prior rung's failing checks / HIGH findings as a fix list and repairs in place, then re-runs **both** gates (green, then review). A fresh worktree is warranted only if the rung judges the foundation unsound (say so in the run log when it does). Repair-in-place avoids redoing the ~80% of the task that was already right.
 - **The `fable` rungs** carry the Fable→Opus refusal fallback (as in Phase 1.5). If the org can't reach Fable at all (Phase 0 degrade), the ladder is `sonnet → opus → codex-rescue`.
 - **The GPT-5 rung** is `codex-rescue` — an independent implementation pass from a different provider. It's the last thing tried before quarantine, on the theory that a different lineage is more likely to break a rut than a bigger Claude.
 - **Cost is bounded** because the ladder is failure-gated: the vast majority of tasks green on `sonnet` at the first rung and never climb. Only the ones that fight back reach the expensive/slow tiers.
@@ -164,7 +175,8 @@ sonnet 5  →  opus 4.8  →  fable 5  →  GPT-5 (codex-rescue)  →  quarantin
 ## Flags
 
 - `--no-review` — skip Phase 1.5 entirely (green-gate only, the original behaviour). This also skips the Fable adjudicator (there's nothing to adjudicate). Use for trusted/mechanical backlogs or when Codex is unavailable and you want to proceed anyway.
-- `--panel` — in Phase 1.5, add an Opus co-reviewer alongside the GPT-5 reviewer; the Fable adjudicator judges the union of both reviews. Off by default (roughly doubles review cost); use it on high-risk backlogs where broader coverage is worth it.
+- `--panel` — in Phase 1.5, add an Opus co-reviewer alongside the GPT-5 reviewer; the adjudicator judges the union of both reviews. Off by default (roughly doubles review cost); use it on high-risk backlogs where broader coverage is worth it.
+- `--review=auto` — risk-tiered review: the orchestrator **skips Phase 1.5** for tasks it classifies as mechanically low-risk (docs-only, test-only, mechanical renames; never for anything touching security / auth / crypto / concurrency / migration / schema). Conservative by construction: any doubt → full review. The green gate still applies to skipped tasks, and every skipped task is listed in the Phase 4 report so the cut is auditable. This is the one optimization that genuinely trims the quality bar — use it for trusted/mechanical backlogs, not by default.
 - (existing) a `tasks/` path in `$ARGUMENTS` overrides cwd discovery.
 
 ## Principles
@@ -197,4 +209,4 @@ Hard-won lessons from live `/implement` runs (greenfield Plottle; brownfield ell
 
 ## Distribution / maintenance (for the skill author)
 
-Ships in the `kev` plugin of `proton-pidgeon/claude-skills` (marketplace `kevdunn`); reaches other hosts via `/plugin marketplace update kevdunn` + restart. It is the executing counterpart to `[[skill-understand]]`'s sibling `/ingest` (design docs → `specs/`+`tasks/`); the two share the `tasks/NN-*.md` contract (`Depends on:`, `Relevant specs:`, deliverable checkboxes, `Definition of done`). If that contract changes in `/ingest`, update Phase 0/1 here to match. Worktree-fanout, quarantine, and DAG-pipeline design decided 2026-05-30 with the user; adversarial Codex review gate (Phase 1.5, via `openai/codex-plugin-cc`'s `/codex:adversarial-review`, high-severity-blocks, on-by-default with `--no-review`) added 2026-07-07 with the user. **Multi-model routing added 2026-07-10 with the user** (two axes — the Claude `haiku→sonnet→opus→fable` ladder via the Agent tool's per-spawn `model`, and cross-provider Claude↔GPT-5 via the Codex plugin): `sonnet` implements, `opus` resolves, a dedicated **Fable adjudicator** judges the GPT-5 review (a cross-lineage gate), `haiku` reports, and a failure-gated **escalation ladder** (`sonnet → opus → fable → codex-rescue`) climbs before quarantine. `--panel` adds an Opus co-reviewer. The routing is unverified by a live run — the first real `/implement` should confirm the ladder + Fable adjudicator behave and fold any gotchas into "Field-tested gotchas" above. The review + Fable rungs depend on the external Codex plugin (installed + authed) and a Fable-capable (non-ZDR) org respectively — neither is synced by `kevdunn`; note both in host setup.
+Ships in the `kev` plugin of `proton-pidgeon/claude-skills` (marketplace `kevdunn`); reaches other hosts via `/plugin marketplace update kevdunn` + restart. It is the executing counterpart to `[[skill-understand]]`'s sibling `/ingest` (design docs → `specs/`+`tasks/`); the two share the `tasks/NN-*.md` contract (`Depends on:`, `Relevant specs:`, deliverable checkboxes, `Definition of done`). If that contract changes in `/ingest`, update Phase 0/1 here to match. Worktree-fanout, quarantine, and DAG-pipeline design decided 2026-05-30 with the user; adversarial Codex review gate (Phase 1.5, via `openai/codex-plugin-cc`'s `/codex:adversarial-review`, high-severity-blocks, on-by-default with `--no-review`) added 2026-07-07 with the user. **Multi-model routing added 2026-07-10 with the user** (two axes — the Claude `haiku→sonnet→opus→fable` ladder via the Agent tool's per-spawn `model`, and cross-provider Claude↔GPT-5 via the Codex plugin): `sonnet` implements, `opus` resolves, a dedicated **Fable adjudicator** judges the GPT-5 review (a cross-lineage gate), `haiku` reports, and a failure-gated **escalation ladder** (`sonnet → opus → fable → codex-rescue`) climbs before quarantine. `--panel` adds an Opus co-reviewer. The routing is unverified by a live run — the first real `/implement` should confirm the ladder + two-tier adjudication behave and fold any gotchas into "Field-tested gotchas" above. The review + Fable rungs depend on the external Codex plugin (installed + authed) and a Fable-capable (non-ZDR) org respectively — neither is synced by `kevdunn`; note both in host setup. Model versions pinned in this file were last audited 2026-09-29 (Sonnet 5.5 / Opus 5.5 / Fable 5.1 / Codex default gpt-5.6-terra).

@@ -1,0 +1,219 @@
+---
+name: book-review
+description: Read a whole book and write an honest, spoiler-free, rule-checked review with a 1 to 5 rating, an error log, and a spoiler ledger. Use when Kev asks to review a book, write a book review, rate a book, or draft a review of a title or book file.
+---
+
+# Book review
+
+Read the full text of a book, keep working notes while reading (an editing-error
+log, a spoiler ledger, and evidence for strengths and weaknesses), decide an
+honest rating, draft the review, and validate the draft against the review
+rules before handing it over.
+
+The rules below are hard requirements. The review is only useful if readers can
+trust it, so honesty and accuracy outrank everything else, including making the
+review sound good.
+
+## The review rules
+
+1. **Honest.** The rating and tone follow the evidence. A book that was a slog
+   gets a low rating and a generally negative review. Never inflate.
+2. **Correct spelling and grammar,** proofread repeatedly.
+3. **Same language as the book.** A Spanish book gets a Spanish review.
+4. **At least 300 words.** Aim for 400 to 600.
+5. **No spoilers at all** (see "What counts as a spoiler").
+6. **A rating on a 1 to 5 scale stated in the review,** where 1 is the worst and
+   5 is the best (for example, "I rate this book 3 out of 5 stars.").
+7. **The rating is explained.** For anything under 5, say why each deducted star
+   was deducted. For a 5, explain thoroughly why the book earns it.
+8. **Negatives are listed,** meaning what could change to make the book better.
+   If there is truly nothing to criticize, say so explicitly in your own words.
+9. **Ten or more definite editing errors, or signs the book was not
+   professionally edited, means no 5 out of 5.**
+10. **Zero editing errors found means the review must explicitly praise the
+    flawless editing,** in your own words. This is rare, so double-check the
+    error log before claiming it.
+11. **One to nine errors** need not be mentioned (it is allowed).
+12. **No page count.** Page counts vary by format. If length deserves mention,
+    give the word count instead.
+13. **No author gender** unless it is certain. Default to "the author" or the
+    author's name.
+14. **No objectively false statements, and nothing uncertain presented as
+    certain.** Rules 12 and 13 are specific cases of this broader rule.
+
+## Step 0. Settle inputs
+
+Before reading, find out two things. Ask in one short question (AskUserQuestion
+if available). If no one is there to answer, proceed with the defaults and say
+which you used at the top of the reply.
+
+- **Which book and where the text is.** Default to the search order in Step 1.
+- **Whose verdict leads.** If Kev has read the book and gives his rating or
+  reactions, those lead: the review must not contradict his verdict, and you
+  build the evidence around it (but flag it plainly if the text contradicts one
+  of his factual claims). If he gives nothing, form your own honest assessment
+  from the full text and state in the reply that the rating is yours.
+
+## Step 1. Get the complete text
+
+The rules assume the reviewer finished the book, so the review must rest on the
+**entire text**. Never review from memory of the book, plot summaries, other
+reviews, or web search. If the complete text cannot be obtained, stop and say
+so.
+
+Look for the text in this order:
+
+1. A file attached to the conversation or a path Kev gave.
+2. Kev's OneDrive Books folder. In cloud sessions use the Pinakes MCP tools
+   (`search`, then `get_document`). On the Mac Studio, the local path is
+   `~/Library/CloudStorage/OneDrive-Personal/Documents/Books`. On Windows hosts
+   it is `%USERPROFILE%\OneDrive\Documents\Books`.
+3. The Fovea library, through the `fovea-export` skill, when the `fovea` tools
+   are available.
+
+Convert the book to plain text if needed (PDF, EPUB, and DOCX all work). If a
+document is large, page through it in full rather than sampling. Partial reading
+is not acceptable.
+
+## Step 2. Prepare
+
+Record these in the notes file (`review-notes-<slug>.md`) before the read-through.
+
+- **Language** of the book. The review will be written in it.
+- **Word count.** Count the words of the main text, excluding front matter
+  (copyright page, contents, acknowledgments) and back matter (author bio,
+  previews of other books). This is an estimate, so it may only appear in the
+  review as an approximation, for example "roughly 85,000 words."
+- **Author gender evidence.** Note it only if the text itself states it plainly
+  (for example, an "About the Author" section that uses pronouns for the
+  author). Otherwise record "unconfirmed," which means neutral references only.
+- **Premise boundary.** Mark where the setup ends, usually around the first 10
+  to 15 percent of the book, or the point the jacket copy would describe. Only
+  material before this boundary may appear in the review.
+
+## Step 3. Read the whole book and take notes
+
+Read chapter by chapter. For long books you may fan out chunks to subagents
+with these same instructions, then merge their notes. For each chunk, add to
+the notes file:
+
+**Error log.** One row per error, with the exact quote, its location (chapter
+or section), the type (spelling, grammar, punctuation, wrong word, continuity),
+and a status of either `definite` or `excluded`.
+
+- Count only `definite` errors made by the author or editor.
+- Mark as `excluded`, and do not count, anything that is probably a
+  file-conversion artifact (OCR misreads, broken hyphenation at line ends,
+  stray markup, mangled ligatures, missing spaces around formatting),
+  intentional dialect or voice, deliberate stylistic choices, and legitimate
+  regional spelling (British versus American).
+- When unsure whether something is an error, mark it `excluded` with a note.
+
+**Spoiler ledger.** Every twist, reveal, character death or fate, hidden
+identity, ending, late-book development, and resolution of a central question.
+This list is what the draft gets checked against. Include the specific names
+and terms that would give these away.
+
+**Strengths and weaknesses.** Each with concrete evidence (a scene, a pattern,
+a passage reference) so the review's claims can be backed up. Look at prose,
+pacing, structure, characterization, argument quality (for nonfiction), accuracy
+(for nonfiction), dialogue, worldbuilding, and whether the book delivers on what
+it sets out to do.
+
+## Step 4. Decide the rating
+
+1. Start from the evidence (and Kev's verdict, if he gave one).
+2. Count the `definite` errors. If there are 10 or more, or the book shows other
+   signs of not being professionally edited (inconsistent formatting, repeated
+   continuity errors, unedited filler), the rating cannot be 5.
+3. Write down, in the notes, the reason for each star deducted, or the case for
+   a 5. These reasons go into the review.
+
+Be willing to give a 1 or a 2. Do not round up to be kind.
+
+## What counts as a spoiler
+
+Anything past the premise boundary. That includes outcomes, twists, reveals,
+deaths, who did it, who ends up with whom, how the central conflict resolves,
+late plot developments, and the ending. It also includes hints at them, such as
+"the twist in the final act changes everything," "not everyone survives," or
+"you'll never guess who is behind it." For nonfiction, the book's core argument
+and conclusions are fair to discuss, but surprising late revelations in a
+narrative nonfiction book are not.
+
+When in doubt, leave it out.
+
+## Step 5. Draft the review
+
+Write in the book's language. When the book is in English, use US English
+spelling.
+
+A structure that works well (as flowing prose, not headings, unless Kev asks for
+headings):
+
+1. What the book is: genre, the premise as set up before the boundary, and the
+   kind of reader it is aimed at.
+2. What works, with specific evidence.
+3. What does not work, or what could be better (rule 8). If there is genuinely
+   nothing, say so plainly.
+4. Editing. Required when zero errors were found (rule 10), and appropriate
+   when there are many.
+5. The rating, stated as "X out of 5," with the reason for each deducted star
+   or the case for a perfect score.
+6. Who would enjoy it, and who might not.
+
+Style requirements:
+
+- Plain, direct prose. No ornamental phrasing or clever aphorisms.
+- No em dashes or en dashes. Use commas, colons, parentheses, or separate
+  sentences.
+- No abrupt colon-fragment lead-ins such as "The verdict:" and no semicolons
+  splicing two short clauses. Write full sentences with natural connectives.
+- Keep articles and conjunctions. Do not write in clipped fragments.
+
+Factual discipline:
+
+- Every factual statement must be something you verified in the text or know
+  for certain. Do not state publication year, series order, the author's
+  background, awards, or sales unless you have confirmed them. When in doubt,
+  leave it out or phrase it as your impression ("it reads like," "I found").
+- Opinions are fine and expected, as long as they read as opinions.
+- No page counts. Word count only as an approximation, and only if it matters.
+- Neutral references to the author unless gender is confirmed in the notes.
+
+## Step 6. Proofread and validate
+
+Repeat until everything passes.
+
+1. Save the draft to `review-<slug>.md` (the review text only, with no notes).
+2. Run the checker, which is in this skill's folder at `scripts/check_review.py`:
+
+   ```bash
+   python3 <skill-dir>/scripts/check_review.py review-<slug>.md \
+     --errors <definite error count> \
+     --spoilers spoilers-<slug>.txt \
+     --lang <two-letter language code> \
+     [--author-gender-confirmed]
+   ```
+
+   `spoilers-<slug>.txt` holds the key names and terms from the spoiler ledger,
+   one per line. The script needs only the Python standard library. If
+   `pyspellchecker` is installed it also flags unknown words.
+
+3. Fix every FAIL. Review every WARN by hand (pronoun warnings often refer to
+   characters, which is fine).
+4. Reread the full draft at least twice yourself, once for spelling and grammar
+   and once for facts and spoilers, comparing it against the spoiler ledger
+   line by line.
+5. Answer the manual checklist the script prints. Every answer must be yes.
+
+## Step 7. Deliver
+
+- Put the finished review in the reply, ready to paste.
+- After it, add a short summary line with the rating, the number of definite
+  errors found (and how many were excluded as likely conversion artifacts),
+  the review's word count, and whose verdict the rating reflects.
+- Keep `review-<slug>.md` and `review-notes-<slug>.md` (error log, spoiler
+  ledger, evidence). Send the notes file to Kev if the surface supports sending
+  files, so he can check the error count and the rating reasons.
+- Never put the error log or the spoiler ledger inside the review itself.

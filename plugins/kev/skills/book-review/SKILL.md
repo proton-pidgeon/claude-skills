@@ -207,7 +207,41 @@ Repeat until everything passes.
    line by line.
 5. Answer the manual checklist the script prints. Every answer must be yes.
 
-## Step 7. Save next to the book
+## Step 7. Reflect against the rules
+
+The checker catches mechanical problems. This step catches the subtler ones.
+Reread the draft once more, slowly, as a skeptical reader holding the 14 rules,
+and ask each of these questions. Fix whatever they turn up, then rerun the
+checker.
+
+1. **Can every quoted error be wrong in the source?** If the text came from OCR
+   or another conversion, a missing word, a dropped letter, or odd spacing
+   could be a scanning glitch. In the review, quote only errors that a
+   conversion cannot produce, such as wrong words ("pouring" for "poring"),
+   grammar mistakes, and name inconsistencies. Keep the uncertain ones in the
+   notes.
+2. **Is every intensifier supported by the text?** Words like "at a glance,"
+   "never," "always," "every," and "strong" make claims. Check each one against
+   the book, and soften it to what the text actually shows.
+3. **Is every content note accurate in degree?** Describe violence, language,
+   and sexual content at the level the book contains, no stronger and no
+   weaker.
+4. **Does any content note or aside give away a development?** A warning can
+   spoil. "An on-page sex scene" in a review that already mentions a romance
+   tells readers that the leads get together. Use general terms ("sexual
+   content") that warn without revealing who or what happens.
+5. **Whose experience do the first-person lines describe?** Lines such as "I
+   couldn't put it down" claim a reading experience. If Kev gave his own
+   verdict and reactions, make sure the lines match them. If the rating is
+   yours because Kev has not read the book, say so plainly in the reply. Point
+   out that the experiential lines describe your reading, and that the rules
+   assume the reviewer finished the book, so he should read it, or tell you
+   his reactions, before posting it under his name.
+
+Record what the reflection changed in the notes file, under a "Reflection"
+heading. Report it briefly in the reply, too.
+
+## Step 8. Save next to the book
 
 Always save both `review-<slug>.md` (the review only) and
 `review-notes-<slug>.md` (error log, excluded artifacts, spoiler ledger,
@@ -231,10 +265,13 @@ After saving, confirm each saved file is the same size as the local copy (the
 Pinakes result reports bytes). Never put the error log or the spoiler ledger
 inside the review itself.
 
-## Step 8. Deliver
+## Step 9. Deliver
 
 - Put the finished review in the reply, ready to paste.
 - After it, add a short summary line with the rating, the number of definite
   errors found (and how many were excluded as likely conversion artifacts),
   the review's word count, and whose verdict the rating reflects.
+- List what the reflection step changed, in a sentence or two.
+- If the verdict is yours rather than Kev's, include the voice caveat from the
+  reflection step.
 - Name the folder where both files were saved.

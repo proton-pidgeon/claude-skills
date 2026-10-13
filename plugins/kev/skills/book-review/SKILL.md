@@ -207,13 +207,34 @@ Repeat until everything passes.
    line by line.
 5. Answer the manual checklist the script prints. Every answer must be yes.
 
-## Step 7. Deliver
+## Step 7. Save next to the book
+
+Always save both `review-<slug>.md` (the review only) and
+`review-notes-<slug>.md` (error log, excluded artifacts, spoiler ledger,
+evidence, and rating reasons) in the same folder as the book file. Do this
+without being asked. A copy that exists only in the session workspace does not
+count as saved.
+
+- **Book read from OneDrive through Pinakes:** write both files with the
+  Pinakes `create_document` tool to the book's folder (for example
+  `Documents/Books/<Title>/review-<slug>.md`). If a file already exists there,
+  replace it with `update_document`.
+- **Book read from a local path** (Mac Studio or Windows OneDrive folder, or any
+  other folder Kev named): write both files into that same directory.
+- **Book exported from Fovea:** save into the folder the export landed in.
+- **Book only attached to the conversation, with no folder:** save to
+  `Documents/Books/<Title>/` in OneDrive through Pinakes, creating the folder.
+- If saving fails, say so plainly, keep the local copies, and send them to Kev
+  as files instead.
+
+After saving, confirm each saved file is the same size as the local copy (the
+Pinakes result reports bytes). Never put the error log or the spoiler ledger
+inside the review itself.
+
+## Step 8. Deliver
 
 - Put the finished review in the reply, ready to paste.
 - After it, add a short summary line with the rating, the number of definite
   errors found (and how many were excluded as likely conversion artifacts),
   the review's word count, and whose verdict the rating reflects.
-- Keep `review-<slug>.md` and `review-notes-<slug>.md` (error log, spoiler
-  ledger, evidence). Send the notes file to Kev if the surface supports sending
-  files, so he can check the error count and the rating reasons.
-- Never put the error log or the spoiler ledger inside the review itself.
+- Name the folder where both files were saved.

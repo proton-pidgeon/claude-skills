@@ -75,6 +75,11 @@ Convert the book to plain text if needed (PDF, EPUB, and DOCX all work). If a
 document is large, page through it in full rather than sampling. Partial reading
 is not acceptable.
 
+Keep a complete plain-text copy of the book in the working directory
+(`book-<slug>.txt`). When reading through Pinakes, write each page to that file
+as you read it. The fact check in Step 8 needs it, because search tools return
+one hit per document and cannot count how often something appears.
+
 ## Step 2. Prepare
 
 Record these in the notes file (`review-notes-<slug>.md`) before the read-through.
@@ -241,7 +246,35 @@ checker.
 Record what the reflection changed in the notes file, under a "Reflection"
 heading. Report it briefly in the reply, too.
 
-## Step 8. Save next to the book
+## Step 8. Fact-check against the source text
+
+The review must contain nothing that is not in the book. Check it against the
+book text itself, not against memory or the notes, because notes can carry an
+earlier mistake forward.
+
+1. **List every checkable claim.** Go sentence by sentence and pull out each
+   statement of fact. That includes names, roles, places, and relationships,
+   descriptions of the premise and setting, every quoted phrase or error,
+   every number (victims, word count, dates), every claim about how often
+   something happens ("again and again," "several," "often"), and every
+   content note.
+2. **Verify each claim in `book-<slug>.txt`.** Search the full text for each
+   one. Confirm that quoted phrases appear exactly as quoted. For frequency
+   claims, count the occurrences (for example with `grep -c`) and judge
+   whether the count supports the wording. A habit that appears four times in
+   a whole novel does not appear "so often."
+3. **Fix what fails.** Remove or reword any claim the text does not support.
+   Soften anything only partly supported. Opinions ("I found the pacing
+   quick") don't need text evidence, but any facts inside them do.
+4. **Record the result.** Add a "Fact check" table to the notes file, with one
+   row per claim, the evidence (chapter and a short quote or count), and the
+   result (verified, softened, or removed).
+5. **Rerun the checker** if anything changed.
+
+Report in the reply how many claims were checked and what the fact check
+changed.
+
+## Step 9. Save next to the book
 
 Always save both `review-<slug>.md` (the review only) and
 `review-notes-<slug>.md` (error log, excluded artifacts, spoiler ledger,
@@ -265,13 +298,13 @@ After saving, confirm each saved file is the same size as the local copy (the
 Pinakes result reports bytes). Never put the error log or the spoiler ledger
 inside the review itself.
 
-## Step 9. Deliver
+## Step 10. Deliver
 
 - Put the finished review in the reply, ready to paste.
 - After it, add a short summary line with the rating, the number of definite
   errors found (and how many were excluded as likely conversion artifacts),
   the review's word count, and whose verdict the rating reflects.
-- List what the reflection step changed, in a sentence or two.
+- List what the reflection and fact-check steps changed, in a sentence or two.
 - If the verdict is yours rather than Kev's, include the voice caveat from the
   reflection step.
 - Name the folder where both files were saved.

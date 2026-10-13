@@ -2,7 +2,7 @@
   "$schema": "https://anthropic.com/claude-code/plugin.schema.json",
   "name": "kev",
   "description": "Personal skills (feature, project-design, ingest, implement, harden, security-test, understand, portfolio, peggy, peggy-doctor, remote-debug, daemonize, fork-hack, ship-ios-repair, ship-ios-setup, fleet, host, commit, deep-research, notebooklm-push, fovea-export, book-review), commands (telegram, gui-teardown, harden, notebooklm, project-design, devtools), and cross-surface sync hooks.",
-  "version": "0.31.3",
+  "version": "0.31.4",
   "author": {
     "name": "Kev Dunn",
     "email": "kevdunn@gmail.com"

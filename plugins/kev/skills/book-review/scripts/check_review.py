@@ -93,6 +93,13 @@ def main():
         for m in re.finditer(PAGE_COUNT, lower):
             fail(f"Possible page-count mention: '{m.group(0)}'. Use an approximate word count instead.")
 
+    # Content warnings (Kev does not want them in reviews)
+    if english:
+        for phrase in ("readers should know", "content warning", "trigger warning",
+                       "be warned", "be aware that", "sensitive readers"):
+            if phrase in lower:
+                fail(f"Content-warning language found: '{phrase}'. Remove it (Step 5).")
+
     # Dashes
     for ch, name in (("—", "em dash"), ("–", "en dash")):
         n = text.count(ch)

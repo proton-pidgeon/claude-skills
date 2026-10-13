@@ -167,6 +167,11 @@ headings):
    or the case for a perfect score.
 6. Who would enjoy it, and who might not.
 
+Do not include content warnings or "readers should know" notes about violence,
+language, sexual content, or other sensitive material. Kev does not want them
+in his reviews. Describing the genre and tone as part of the premise is fine,
+but do not single out content as a caution to readers.
+
 Style requirements:
 
 - Plain, direct prose. No ornamental phrasing or clever aphorisms.
@@ -228,13 +233,13 @@ checker.
 2. **Is every intensifier supported by the text?** Words like "at a glance,"
    "never," "always," "every," and "strong" make claims. Check each one against
    the book, and soften it to what the text actually shows.
-3. **Is every content note accurate in degree?** Describe violence, language,
-   and sexual content at the level the book contains, no stronger and no
-   weaker.
-4. **Does any content note or aside give away a development?** A warning can
-   spoil. "An on-page sex scene" in a review that already mentions a romance
-   tells readers that the leads get together. Use general terms ("sexual
-   content") that warn without revealing who or what happens.
+3. **Did a content warning slip in?** Remove any "readers should know" note
+   about violence, language, sexual content, or other sensitive material
+   (see Step 5).
+4. **Does any aside give away a development?** Side remarks can spoil as
+   easily as plot summary. A passing mention that a relationship "heats up,"
+   or that a character "won't be the same," reveals what happens. Cut or
+   generalize anything that hints at events past the premise boundary.
 5. **Whose experience do the first-person lines describe?** Lines such as "I
    couldn't put it down" claim a reading experience. If Kev gave his own
    verdict and reactions, make sure the lines match them. If the rating is
@@ -255,9 +260,8 @@ earlier mistake forward.
 1. **List every checkable claim.** Go sentence by sentence and pull out each
    statement of fact. That includes names, roles, places, and relationships,
    descriptions of the premise and setting, every quoted phrase or error,
-   every number (victims, word count, dates), every claim about how often
-   something happens ("again and again," "several," "often"), and every
-   content note.
+   every number (victims, word count, dates), and every claim about how often
+   something happens ("again and again," "several," "often").
 2. **Verify each claim in `book-<slug>.txt`.** Search the full text for each
    one. Confirm that quoted phrases appear exactly as quoted. For frequency
    claims, count the occurrences (for example with `grep -c`) and judge

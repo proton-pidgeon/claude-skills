@@ -5,18 +5,31 @@ description: Export a book from the local Fovea library by title and save it int
 
 # Fovea → OneDrive export
 
-Export books from the local Fovea service with the `fovea` MCP server tools and
-save them to Kevin's personal OneDrive Books folder.
+Export books from Kevin's Fovea library with the `fovea` MCP server tools and
+save them to his personal OneDrive Books folder on this machine.
 
-**Requirements:** the `fovea` MCP server (registered with Claude Code on the Mac
-Studio, where the Fovea service and the OneDrive folder live). If the `fovea`
-tools are not available in this session, say so and stop — this skill only
-works on the Studio.
+**Requirements:** the `fovea` MCP server installed and paired on this host (it
+runs on the Mac Studio and the fleet hosts ravenz-node, alienlap, and bb-mm,
+each paired as its own Fovea device). If the `fovea` tools are not available
+in this session, say so and stop.
 
-**Destination (always, unless Kevin names a different folder in the request):**
-`/Users/k3v/Library/CloudStorage/OneDrive-Personal/Documents/Books`
-(the same folder as `~/OneDrive/Documents/Books`; it syncs to his personal
-OneDrive automatically).
+## Destination — find this host's OneDrive Books folder
+
+Use the first of these that fits the machine you are running on:
+
+- **Mac Studio:** `/Users/k3v/Library/CloudStorage/OneDrive-Personal/Documents/Books`
+- **Windows (ravenz-node, alienlap):** `%USERPROFILE%\OneDrive\Documents\Books` —
+  the personal OneDrive root is the plain `OneDrive` folder, NOT
+  `OneDrive - Colostate` or any other org folder. If `Documents` exists but
+  `Books` does not, create `Books`.
+- **Any other Mac:** `~/Library/CloudStorage/OneDrive-Personal/Documents/Books`
+  if that OneDrive folder exists.
+- **No OneDrive on this host** (e.g. bb-mm): export to `~/Downloads/fovea`
+  instead, and state plainly in your report that the file went to Downloads
+  because this host has no OneDrive.
+
+Never save exports anywhere else unless Kevin names a different folder in the
+request.
 
 ## Steps
 
@@ -38,19 +51,25 @@ OneDrive automatically).
    - `format: "obsidian"` only when Kevin explicitly asks for Obsidian.
 4. **Verify and report.** Confirm the returned `path` is inside the
    destination folder and `bytes` > 0. Report one line: book title, format,
-   file name, size — e.g. "Exported *Tractatus Logico-Philosophicus*
-   (Markdown, 412 KB) to OneDrive/Documents/Books."
+   file name, size, and where it landed — e.g. "Exported *Tractatus
+   Logico-Philosophicus* (Markdown, 412 KB) to OneDrive/Documents/Books."
 
 ## If a tool returns an authentication error
 
-The MCP server talks to Fovea as the paired device `vesper-ai`. Pairing is
-normally already done. If calls fail with an auth error, re-pair once, then
-retry the export once:
+The MCP server talks to Fovea as this host's paired device (`vesper-ai` on
+the Studio, `fovea-ravenz` on ravenz-node, `fovea-alienlap` on alienlap,
+`fovea-bbmm` on bb-mm). Pairing is normally already done. If calls fail with
+an auth error, re-pair once with this host's device name, then retry:
 
-1. In `/Users/k3v/code-local/fovea/mcp-server`, run `uv run fovea-mcp-pair`
-   (it calls pair-init and prompts for a 6-digit code).
-2. Read the fresh code from the service log:
-   `grep "PAIRING CODE for 'vesper-ai'" ~/Library/Application\ Support/Fovea/logs/service.*.log | tail -1`
+1. In this host's `mcp-server` directory (Studio:
+   `/Users/k3v/code-local/fovea/mcp-server`; Windows:
+   `%USERPROFILE%\code-local\fovea\mcp-server`; bb-mm:
+   `/Users/me/code-local/fovea/mcp-server`), run
+   `uv run fovea-mcp-pair --device-name <this host's device name> --base-url http://kevs-mac-studio.tail46ac84.ts.net:8421`
+   (on the Studio itself the base URL can stay the default localhost). It
+   calls pair-init and prompts for a 6-digit code.
+2. The code is written to the Fovea service log **on the Studio**:
+   `grep "PAIRING CODE for '<device name>'" ~/Library/Application\ Support/Fovea/logs/service.*.log | tail -1`
    (codes expire in 5 minutes).
 3. Give the code to the CLI, then retry the export.
 
@@ -58,7 +77,8 @@ If it still fails, stop and report the exact error — do not loop retries.
 
 ## Rules
 
-- Export only. Never delete or rename files already in the Books folder, and
-  never change anything in the Fovea library itself.
+- Export only. Never delete or rename files already in the destination
+  folder, and never change anything in the Fovea library itself.
 - Always pass `out_dir` explicitly — never rely on the tool's default
-  download folder.
+  download folder (except for the no-OneDrive fallback above, where Downloads
+  is the explicit choice).

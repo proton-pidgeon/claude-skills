@@ -21,7 +21,7 @@ import { readdirSync, readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { join, basename } from 'node:path';
 
 const SIZE_WARN_BYTES = 24000; // the harness truncates the index near 24.4KB
-const DESC_MAX = 175; // per-entry index-line cap; full description stays in the file
+const DESC_MAX = 90; // per-entry index-line cap; full description stays in the file
 
 // Cap an index-line description at a word boundary so one long field can't
 // bloat the whole index (the full text still lives in the memory file, which

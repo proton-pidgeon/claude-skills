@@ -102,17 +102,41 @@ Read chapter by chapter. For long books you may fan out chunks to subagents
 with these same instructions, then merge their notes. For each chunk, add to
 the notes file:
 
-**Error log.** One row per error, with the exact quote, its location (chapter
-or section), the type (spelling, grammar, punctuation, wrong word, continuity),
-and a status of either `definite` or `excluded`.
+**Error log.** Log one error per line, in this exact format. Do not use a
+table.
 
-- Count only `definite` errors made by the author or editor.
-- Mark as `excluded`, and do not count, anything that is probably a
+```
+"example" (context) - chapter no. - error type
+```
+
+- **"example"** is the exact text as it appears in the book.
+- **(context)** says briefly where it occurs (who is speaking or what is
+  happening) and, when it helps, what the text should say.
+- **chapter no.** is the chapter, written as "Ch. 3," or "Front matter" for
+  the front matter.
+- **error type** is one of: spelling, grammar, punctuation, wrong word, missing
+  word, hyphenation, pronoun error, name inconsistency, or continuity.
+
+For example:
+
+```
+"pouring over the files" (Sam rereads the case files on the plane; should be "poring") - Ch. 3 - wrong word
+```
+
+Keep two lists under separate headings in the notes file. "Error log
+(definite, authorial)" holds the errors that count. "Excluded" holds the
+items that do not count, in the same format, with the reason for excluding
+it as the error type (for example, "OCR artifact" or "intentional dialect").
+Order each list by chapter.
+
+- Count only definite errors made by the author or editor.
+- Put in the excluded list, and do not count, anything that is probably a
   file-conversion artifact (OCR misreads, broken hyphenation at line ends,
   stray markup, mangled ligatures, missing spaces around formatting),
   intentional dialect or voice, deliberate stylistic choices, and legitimate
   regional spelling (British versus American).
-- When unsure whether something is an error, mark it `excluded` with a note.
+- When unsure whether something is an error, put it in the excluded list and
+  say why in the context.
 
 **Spoiler ledger.** Every twist, reveal, character death or fate, hidden
 identity, ending, late-book development, and resolution of a central question.
@@ -128,9 +152,10 @@ it sets out to do.
 ## Step 4. Decide the rating
 
 1. Start from the evidence (and Kev's verdict, if he gave one).
-2. Count the `definite` errors. If there are 10 or more, or the book shows other
-   signs of not being professionally edited (inconsistent formatting, repeated
-   continuity errors, unedited filler), the rating cannot be 5.
+2. Count the lines in the definite error log. If there are 10 or more, or the
+   book shows other signs of not being professionally edited (inconsistent
+   formatting, repeated continuity errors, unedited filler), the rating cannot
+   be 5.
 3. Write down, in the notes, the reason for each star deducted, or the case for
    a 5. These reasons go into the review.
 
